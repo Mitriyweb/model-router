@@ -1,0 +1,52 @@
+import { config } from "../config";
+import type { NormalizedRequest, ProviderAdapter } from "../types";
+import {
+  buildOpenAIPayload,
+  createOpenAICompatibleStream,
+  openAIResponseToAnthropic,
+} from "./openaiCompatible";
+
+export const openrouterAdapter: ProviderAdapter = {
+  tier: "openrouter",
+
+  canHandle(_req: NormalizedRequest, estimatedTokens: number) {
+    return estimatedTokens <= config.openrouter.limits.tpm;
+  },
+
+  async send(req: NormalizedRequest) {
+    const payload = buildOpenAIPayload(req, config.openrouter.model);
+    const url = `${config.openrouter.baseUrl}/chat/completions`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.openrouter.apiKey}`,
+        "HTTP-Referer": "https://github.com/Mitriyweb/model-router",
+        "X-Title": "model-router",
+      },
+      body: JSON.stringify({ ...payload, stream: false }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`OpenRouter error ${res.status}: ${await res.text()}`);
+    }
+
+    const data = await res.json();
+    return openAIResponseToAnthropic(data, config.openrouter.model);
+  },
+
+  sendStream(req: NormalizedRequest) {
+    const payload = buildOpenAIPayload(req, config.openrouter.model);
+    const url = `${config.openrouter.baseUrl}/chat/completions`;
+    return createOpenAICompatibleStream(
+      url,
+      {
+        Authorization: `Bearer ${config.openrouter.apiKey}`,
+        "HTTP-Referer": "https://github.com/Mitriyweb/model-router",
+        "X-Title": "model-router",
+      },
+      payload,
+      config.openrouter.model,
+    );
+  },
+};

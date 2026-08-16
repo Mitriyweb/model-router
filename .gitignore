@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.router-state.json
+*.bun-build
+*.log
+.DS_Store
+.bun/
