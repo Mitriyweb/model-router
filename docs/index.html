@@ -229,6 +229,7 @@
   <p>Run Claude Code, ZeroClaw, Aider, and Cline on <strong>10 free-tier providers</strong> instead of paying for the Claude API.</p>
   <div class="hero-actions">
     <a class="btn-primary" href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">View on GitHub</a>
+    <a class="btn-secondary" href="#claude-code">Claude Code Setup</a>
     <a class="btn-secondary" href="#install">Quick Install</a>
   </div>
   <div class="install-card" id="install">
@@ -240,6 +241,25 @@
     </div>
     <div class="install-code">
       <span class="cmd">curl -fsSL </span><span class="url">https://raw.githubusercontent.com/Mitriyweb/model-router/main/install.sh</span><span class="cmd"> | bash</span>
+    </div>
+  </div>
+
+  <!-- CLAUDE CODE QUICK START -->
+  <div style="max-width:640px;margin:1.5rem auto 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;text-align:left">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem">
+      <div style="font-size:0.7rem;color:#6c63ff;font-weight:600;letter-spacing:0.05em;margin-bottom:0.4rem">STEP 1</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#e06c75">bun run dev</div>
+      <div style="font-size:0.72rem;color:#8892a4;margin-top:0.3rem">Start the proxy on :8787</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem">
+      <div style="font-size:0.7rem;color:#6c63ff;font-weight:600;letter-spacing:0.05em;margin-bottom:0.4rem">STEP 2</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#00d4aa;word-break:break-all">ANTHROPIC_BASE_URL=<wbr>http://localhost:8787</div>
+      <div style="font-size:0.72rem;color:#8892a4;margin-top:0.3rem">Point Claude Code here</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem">
+      <div style="font-size:0.7rem;color:#6c63ff;font-weight:600;letter-spacing:0.05em;margin-bottom:0.4rem">STEP 3</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#e06c75">claude</div>
+      <div style="font-size:0.72rem;color:#8892a4;margin-top:0.3rem">Run free 🎉</div>
     </div>
   </div>
 </div>
