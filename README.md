@@ -28,6 +28,8 @@ Universal AI proxy that allows **Claude Code**, **ZeroClaw**, **Aider**, **Cline
 
 ---
 
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Visit-blue)](https://mitriyweb.github.io/model-router)
+
 ## Quick Install
 
 Install `model-router` binary with one command:

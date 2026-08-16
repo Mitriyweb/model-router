@@ -1,189 +1,391 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Router</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
-        header {
-            background: #0078d7;
-            color: white;
-            padding: 1rem 0;
-            text-align: center;
-        }
-        .container {
-            width: 80%;
-            margin: auto;
-            overflow: hidden;
-            padding: 0 2rem;
-        }
-        h1, h2, h3 {
-            color: #0078d7;
-        }
-        footer {
-            background: #333;
-            color: white;
-            text-align: center;
-            padding: 1rem 0;
-            position: fixed;
-            width: 100%;
-            bottom: 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .installation {
-            background: #f9f9f9;
-            padding: 1rem;
-            border-radius: 5px;
-            margin: 1rem 0;
-        }
-        pre {
-            background: #f4f4f4;
-            padding: 1rem;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>model-router — Universal Free LLM Proxy</title>
+  <meta name="description" content="Universal AI proxy. Run Claude Code, ZeroClaw, Aider, and Cline on 10 free-tier LLM providers — GitHub Models, Mistral, Groq, Gemini, Cerebras, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --bg-card: #13161e;
+      --bg-card2: #1a1d28;
+      --border: rgba(255,255,255,0.07);
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --text: #e8eaf0;
+      --text-muted: #8892a4;
+      --code-bg: #0a0c11;
+      --radius: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 2rem; height: 60px;
+      background: rgba(13,15,20,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { font-weight: 700; font-size: 1.1rem; color: var(--text); letter-spacing: -0.5px; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent); color: white; padding: 0.4rem 1rem;
+      border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 7rem 2rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(108,99,255,0.18), transparent);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.3);
+      color: #a5a0ff; border-radius: 100px; padding: 0.3rem 0.9rem;
+      font-size: 0.8rem; font-weight: 500; margin-bottom: 1.5rem;
+    }
+    .badge::before { content: '●'; color: var(--accent2); font-size: 0.6rem; }
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 700; letter-spacing: -1.5px; line-height: 1.1;
+      margin-bottom: 1.2rem;
+    }
+    h1 .grad {
+      background: linear-gradient(135deg, #6c63ff 0%, #00d4aa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.15rem; color: var(--text-muted); max-width: 560px;
+      margin: 0 auto 2.5rem; line-height: 1.7;
+    }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--accent); color: white; padding: 0.75rem 1.8rem;
+      border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 30px rgba(108,99,255,0.25);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(108,99,255,0.4); }
+    .btn-secondary {
+      background: var(--bg-card2); color: var(--text); padding: 0.75rem 1.8rem;
+      border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 0.95rem;
+      border: 1px solid var(--border); transition: border-color 0.2s;
+    }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.18); }
+
+    /* INSTALL CARD */
+    .install-card {
+      max-width: 640px; margin: 3.5rem auto 0;
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .install-card-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.7rem 1rem; border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #28c940; }
+    .install-label { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .install-code {
+      padding: 1.2rem 1.4rem; font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem; color: #e06c75; overflow-x: auto; white-space: nowrap;
+    }
+    .install-code .cmd { color: #abb2bf; }
+    .install-code .url { color: var(--accent2); }
+
+    /* STATS */
+    .stats {
+      display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap;
+      padding: 3rem 2rem; border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 2rem; font-weight: 700; color: var(--text); }
+    .stat-num .accent { color: var(--accent); }
+    .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+    /* SECTIONS */
+    section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+    h2 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 0.6rem; }
+    .section-sub { color: var(--text-muted); margin-bottom: 3rem; }
+
+    /* PROVIDERS GRID */
+    .providers-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;
+    }
+    .provider-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.4rem; transition: border-color 0.25s, transform 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .provider-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--glow-color, transparent);
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .provider-card:hover { border-color: rgba(108,99,255,0.35); transform: translateY(-3px); }
+    .provider-card:hover::before { opacity: 1; }
+    .provider-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; }
+    .provider-name { font-weight: 600; font-size: 1rem; }
+    .provider-tag {
+      font-size: 0.7rem; font-weight: 500; padding: 0.2rem 0.6rem; border-radius: 100px;
+      background: rgba(108,99,255,0.15); color: #a5a0ff; border: 1px solid rgba(108,99,255,0.2);
+    }
+    .provider-tag.free { background: rgba(0,212,170,0.12); color: var(--accent2); border-color: rgba(0,212,170,0.2); }
+    .provider-limit { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .provider-desc { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* CLIENTS */
+    .clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+    .client-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.4rem;
+    }
+    .client-title { font-weight: 600; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+    .client-icon { font-size: 1.2rem; }
+    .code-block {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+      color: var(--text-muted); overflow-x: auto; line-height: 1.7;
+    }
+    .code-block .kw { color: #c678dd; }
+    .code-block .val { color: var(--accent2); }
+    .code-block .cmd2 { color: #e06c75; }
+
+    /* HOW IT WORKS */
+    .arch {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+      color: var(--text-muted); overflow-x: auto; line-height: 1.8;
+    }
+    .arch .hi { color: var(--accent2); }
+    .arch .hi2 { color: #6c63ff; }
+    .arch .hi3 { color: #e5c07b; }
+
+    /* FOOTER */
+    footer {
+      text-align: center; padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted); font-size: 0.9rem;
+    }
+    footer a { color: var(--text-muted); text-decoration: underline; }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .stats { gap: 1.5rem; }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Model Router</h1>
-    </header>
-    <div class="container">
-        <h2>Welcome to Model Router</h2>
-        <p>An Anthropic-compatible proxy that lets Claude Code run on 10 free-tier and local LLM providers instead of the paid Claude API.</p>
 
-        <h3>Supported Providers</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Provider</th>
-                    <th>Free Tier Limit</th>
-                    <th>API Type</th>
-                    <th>Best For</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>GitHub Models</td>
-                    <td>15 RPM / 150 RPD</td>
-                    <td>Azure OpenAI</td>
-                    <td>GPT-4o, Claude 3.5 Sonnet, Llama 3.3 70B</td>
-                </tr>
-                <tr>
-                    <td>Cerebras</td>
-                    <td>1M+ tokens / day</td>
-                    <td>OpenAI-compatible</td>
-                    <td>Ultra-fast Llama-3.3-70b batch processing</td>
-                </tr>
-                <tr>
-                    <td>Groq</td>
-                    <td>30 RPM / 6k TPM / 14.4k RPD</td>
-                    <td>OpenAI-compatible</td>
-                    <td>Instant streaming and fast tool calling</td>
-                </tr>
-                <tr>
-                    <td>Google Gemini</td>
-                    <td>15 RPM / 1M TPM / 1.5k RPD</td>
-                    <td>Gemini API</td>
-                    <td>Large context windows (>4k tokens)</td>
-                </tr>
-                <tr>
-                    <td>OpenRouter</td>
-                    <td>20 RPM / 50 RPD (free models)</td>
-                    <td>OpenAI-compatible</td>
-                    <td>Broad selection of open models</td>
-                </tr>
-                <tr>
-                    <td>Mistral AI</td>
-                    <td>2 RPM / 500k TPM / ~1B tpm/mo</td>
-                    <td>OpenAI-compatible</td>
-                    <td>Codestral & Mistral Large</td>
-                </tr>
-                <tr>
-                    <td>NVIDIA NIM</td>
-                    <td>40 RPM / 1,000 requests</td>
-                    <td>OpenAI-compatible</td>
-                    <td>90+ models (Llama, DeepSeek, Phi)</td>
-                </tr>
-                <tr>
-                    <td>Cloudflare AI</td>
-                    <td>60 RPM / 10k RPD</td>
-                    <td>Cloudflare AI</td>
-                    <td>Serverless edge inference</td>
-                </tr>
-                <tr>
-                    <td>Cohere</td>
-                    <td>10 RPM / 100 RPD</td>
-                    <td>Cohere Chat v2</td>
-                    <td>Command R+ with advanced RAG & tool-use</td>
-                </tr>
-                <tr>
-                    <td>Local (Ollama)</td>
-                    <td>Unlimited</td>
-                    <td>OpenAI-compatible</td>
-                    <td>Fully offline & private execution</td>
-                </tr>
-            </tbody>
-        </table>
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">model<span>-</span>router</div>
+  <div class="nav-links">
+    <a href="#providers">Providers</a>
+    <a href="#clients">Clients</a>
+    <a href="#install">Install</a>
+  </div>
+  <a class="nav-cta" href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">GitHub ↗</a>
+</nav>
 
-        <h3>Quick Installation</h3>
-        <div class="installation">
-            <p>Install <code>model-router</code> binary with one command:</p>
-            <pre><code>curl -fsSL https://raw.githubusercontent.com/Mitriyweb/model-router/main/install.sh | bash</code></pre>
-            <p>Or install via Bun:</p>
-            <pre><code>git clone https://github.com/Mitriyweb/model-router.git
-cd model-router
-bun install
-bun run build</code></pre>
-        </div>
-
-        <h3>Configuration</h3>
-        <p>Copy <code>.env.example</code> to <code>.env</code> and fill in any keys you have:</p>
-        <pre><code>cp .env.example .env</code></pre>
-        <p>Example configuration for GitHub Models:</p>
-        <pre><code>GITHUB_TOKEN=ghp_...
-GITHUB_MODELS_MODEL=gpt-4o
-GITHUB_MODELS_RPM=15
-GITHUB_MODELS_TPM=64000
-GITHUB_MODELS_RPD=150</code></pre>
-
-        <h3>Usage</h3>
-        <p>Start the proxy:</p>
-        <pre><code>model-router</code></pre>
-        <p>Or using Bun:</p>
-        <pre><code>bun run start</code></pre>
-        <p>Connect Claude Code:</p>
-        <pre><code>ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude</code></pre>
-
-        <h3>Development</h3>
-        <p>Run with hot reloading:</p>
-        <pre><code>bun run dev</code></pre>
-        <p>Run full validation:</p>
-        <pre><code>bun run validate</code></pre>
-        <p>Compile standalone binary:</p>
-        <pre><code>bun run build</code></pre>
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">Open Source · Free Tier · 10 Providers</div>
+  <h1>Universal <span class="grad">Free LLM</span> Proxy</h1>
+  <p>Run Claude Code, ZeroClaw, Aider, and Cline on <strong>10 free-tier providers</strong> instead of paying for the Claude API.</p>
+  <div class="hero-actions">
+    <a class="btn-primary" href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">View on GitHub</a>
+    <a class="btn-secondary" href="#install">Quick Install</a>
+  </div>
+  <div class="install-card" id="install">
+    <div class="install-card-header">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="install-label">one-line install</span>
     </div>
-    <footer>
-        <p>&copy; 2023 Model Router. All rights reserved.</p>
-    </footer>
+    <div class="install-code">
+      <span class="cmd">curl -fsSL </span><span class="url">https://raw.githubusercontent.com/Mitriyweb/model-router/main/install.sh</span><span class="cmd"> | bash</span>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat"><div class="stat-num"><span class="accent">10</span></div><div class="stat-label">Free providers</div></div>
+  <div class="stat"><div class="stat-num"><span class="accent">2</span></div><div class="stat-label">API formats (Anthropic + OpenAI)</div></div>
+  <div class="stat"><div class="stat-num"><span class="accent">$0</span></div><div class="stat-label">Monthly API cost possible</div></div>
+  <div class="stat"><div class="stat-num"><span class="accent">1M+</span></div><div class="stat-label">Tokens/day (Cerebras free tier)</div></div>
+</div>
+
+<!-- PROVIDERS -->
+<section id="providers">
+  <h2>Supported Providers</h2>
+  <p class="section-sub">All free tiers — configure only the ones you have keys for.</p>
+  <div class="providers-grid">
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">GitHub Models</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">15 RPM / 150 RPD</div>
+      <div class="provider-desc">GPT-4o, Claude 3.5 Sonnet, Llama 3.3 70B via Azure OpenAI</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">Cerebras</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">1M+ tokens / day</div>
+      <div class="provider-desc">Ultra-fast Llama-3.3-70b, largest daily token budget of all free tiers</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">Groq</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">30 RPM / 6k TPM / 14.4k RPD</div>
+      <div class="provider-desc">Instant streaming and fast tool calling via Llama, Gemma, Mistral</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">Google Gemini</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">15 RPM / 1M TPM / 1.5k RPD</div>
+      <div class="provider-desc">Best for large context windows (&gt;4k tokens) via Gemini 2.5 Flash</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">Mistral AI</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">2 RPM / ~1B tokens/month</div>
+      <div class="provider-desc">Codestral for code generation, Mistral Large for reasoning</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">OpenRouter</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">20 RPM / 50 RPD (free models)</div>
+      <div class="provider-desc">Access to 100+ open models from a single endpoint</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">NVIDIA NIM</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">40 RPM / 1,000 requests</div>
+      <div class="provider-desc">90+ GPU-accelerated models: Llama, DeepSeek, Phi, Qwen</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">Cloudflare AI</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">60 RPM / 10k RPD</div>
+      <div class="provider-desc">Serverless edge inference on Cloudflare's global network</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">Cohere</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-limit">10 RPM / 100 RPD</div>
+      <div class="provider-desc">Command R+ with advanced RAG and tool-use capabilities</div>
+    </div>
+    <div class="provider-card">
+      <div class="provider-header"><span class="provider-name">Local (Ollama)</span><span class="provider-tag">Unlimited</span></div>
+      <div class="provider-limit">No limits, fully offline</div>
+      <div class="provider-desc">Any Ollama model — Qwen2.5-Coder, Mistral, Llama 3.2 and more</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section>
+  <h2>How It Works</h2>
+  <p class="section-sub">One proxy, two API formats, ten providers — automatic fallback and rate limiting built-in.</p>
+  <div class="arch">
+<pre>
+  <span class="hi">Claude Code</span>                    <span class="hi">ZeroClaw / Aider / Cline</span>
+  (Anthropic API)                 (OpenAI API)
+        │                               │
+        │ POST /v1/messages             │ POST /v1/chat/completions
+        ▼                               ▼
+  ┌─────────────────────────────────────────────────┐
+  │              <span class="hi2">model-router</span>                      │
+  │   [Rate Limiter] [SHA-256 Cache] [Fallback]     │
+  └──────────────────────┬──────────────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+  <span class="hi3">GitHub Models</span>     <span class="hi3">Mistral</span>         <span class="hi3">Cerebras</span>
+  <span class="hi3">Groq</span>             <span class="hi3">Gemini</span>          <span class="hi3">Ollama</span>
+  ...and 4 more
+</pre>
+  </div>
+</section>
+
+<!-- CLIENTS -->
+<section id="clients">
+  <h2>Client Setup</h2>
+  <p class="section-sub">Works with any Anthropic or OpenAI-compatible tool.</p>
+  <div class="clients-grid">
+    <div class="client-card">
+      <div class="client-title"><span class="client-icon">🤖</span> Claude Code</div>
+      <div class="code-block">
+        <span class="kw">export</span> <span class="val">ANTHROPIC_BASE_URL</span>=http://localhost:8787<br>
+        <span class="kw">export</span> <span class="val">ANTHROPIC_API_KEY</span>=dummy<br>
+        <span class="cmd2">claude</span>
+      </div>
+    </div>
+    <div class="client-card">
+      <div class="client-title"><span class="client-icon">⚡</span> ZeroClaw</div>
+      <div class="code-block">
+        <span class="kw">export</span> <span class="val">OPENAI_BASE_URL</span>=http://localhost:8787/v1<br>
+        <span class="kw">export</span> <span class="val">OPENAI_API_KEY</span>=dummy<br>
+        <span class="cmd2">zeroclaw</span> --model model-router-auto
+      </div>
+    </div>
+    <div class="client-card">
+      <div class="client-title"><span class="client-icon">🛠</span> Aider</div>
+      <div class="code-block">
+        <span class="kw">export</span> <span class="val">OPENAI_API_BASE</span>=http://localhost:8787/v1<br>
+        <span class="kw">export</span> <span class="val">OPENAI_API_KEY</span>=dummy<br>
+        <span class="cmd2">aider</span> --model openai/model-router-auto
+      </div>
+    </div>
+    <div class="client-card">
+      <div class="client-title"><span class="client-icon">🧩</span> Cline / Roo / Continue</div>
+      <div class="code-block">
+        Provider: <span class="val">OpenAI Compatible</span><br>
+        Base URL: <span class="val">http://localhost:8787/v1</span><br>
+        API Key: <span class="val">dummy</span><br>
+        Model: <span class="val">model-router-auto</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <a href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/Mitriyweb/model-router/blob/main/README.md" target="_blank" rel="noopener">Docs</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/Mitriyweb/model-router/releases" target="_blank" rel="noopener">Releases</a>
+    &nbsp;·&nbsp; MIT License
+  </p>
+  <p style="margin-top:0.5rem; font-size:0.8rem;">model-router — free and open source</p>
+</footer>
+
 </body>
 </html>
