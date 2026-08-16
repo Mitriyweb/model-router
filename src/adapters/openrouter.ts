@@ -4,6 +4,7 @@ import {
   buildOpenAIPayload,
   createOpenAICompatibleStream,
   openAIResponseToAnthropic,
+  readProviderError,
 } from "./openaiCompatible";
 
 export const openrouterAdapter: ProviderAdapter = {
@@ -28,7 +29,7 @@ export const openrouterAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(`OpenRouter error ${res.status}: ${await res.text()}`);
+      throw new Error(await readProviderError(res, "OpenRouter", config.openrouter.model));
     }
 
     const data = await res.json();

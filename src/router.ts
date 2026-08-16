@@ -69,6 +69,10 @@ export function planTierOrder(
 ): TierName[] {
   if (opts?.forcePrivate) return ["local"];
 
+  if (config.hasCustomFallbackOrder) {
+    return [...config.fallbackOrder];
+  }
+
   if (estimatedInputTokens > 4000) {
     return [
       "gemini",
@@ -135,27 +139,34 @@ export async function routeRequest(
     const adapter = adapters[tier];
     const limits = limitsByTier[tier];
 
-    if (!hasCredentials(tier)) {
+    const hasKey = hasCredentials(tier);
+    if (!hasKey) {
+      console.warn(`[router] skip ${tier}: no API key/token configured`);
       attempts.push({ tier, skipped: "no API key/token configured" });
       continue;
     }
     if (!adapter.canHandle(req, estimated)) {
+      console.warn(`[router] skip ${tier}: request doesn't fit this tier (context/size)`);
       attempts.push({ tier, skipped: "request doesn't fit this tier (context/size)" });
       continue;
     }
     if (!rateLimiter.canServe(tier, limits, estimated)) {
+      console.warn(`[router] skip ${tier}: rate limit reached`);
       attempts.push({ tier, skipped: "rate limit reached" });
       continue;
     }
 
     try {
+      console.log(`[router] trying ${tier}...`);
       const response = await adapter.send(req);
       const totalTokens = response.usage.input_tokens + response.usage.output_tokens || estimated;
       rateLimiter.record(tier, totalTokens);
       const key = await cacheKey(req);
       setCached(key, response);
+      console.log(`[router] success via ${tier}`);
       return { tierUsed: tier, response, attempts, policyApplied: rule?.name };
     } catch (err: any) {
+      console.warn(`[router] fail ${tier}: ${err.message ?? String(err)}`);
       attempts.push({ tier, error: err.message ?? String(err) });
     }
   }

@@ -152,7 +152,7 @@ function handleModels(): Response {
     { id: "claude-3-5-sonnet", object: "model", created: 1700000000, owned_by: "github" },
     { id: "llama-3.3-70b", object: "model", created: 1700000000, owned_by: "cerebras" },
     { id: "llama-3.3-70b-versatile", object: "model", created: 1700000000, owned_by: "groq" },
-    { id: "gemini-2.5-flash", object: "model", created: 1700000000, owned_by: "gemini" },
+    { id: "gemini-3.7-flash", object: "model", created: 1700000000, owned_by: "gemini" },
     { id: "codestral-latest", object: "model", created: 1700000000, owned_by: "mistral" },
     { id: "mistral-large-latest", object: "model", created: 1700000000, owned_by: "mistral" },
     { id: "command-r-plus-08-2024", object: "model", created: 1700000000, owned_by: "cohere" },
@@ -190,6 +190,7 @@ function json(data: unknown, status = 200, headers: Record<string, string> = {})
 export function startServer(port = config.port) {
   const server = Bun.serve({
     port,
+    idleTimeout: 60,
     async fetch(request) {
       const url = new URL(request.url);
 

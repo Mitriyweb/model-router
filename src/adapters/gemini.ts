@@ -1,6 +1,7 @@
 import { config } from "../config";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
 import type { AnthropicResponse, ContentBlock, NormalizedRequest, ProviderAdapter } from "../types";
+import { readProviderError } from "./openaiCompatible";
 
 function buildToolIdToNameMap(req: NormalizedRequest): Map<string, string> {
   const map = new Map<string, string>();
@@ -14,6 +15,75 @@ function buildToolIdToNameMap(req: NormalizedRequest): Map<string, string> {
     }
   }
   return map;
+}
+
+export function sanitizeGeminiSchema(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeGeminiSchema(item));
+  }
+
+  if (value && typeof value === "object") {
+    const cleaned: Record<string, unknown> = {};
+    const entries = Object.entries(value as Record<string, unknown>);
+
+    for (const [key, innerValue] of entries) {
+      if (
+        [
+          "$schema",
+          "$defs",
+          "definitions",
+          "additionalProperties",
+          "propertyNames",
+          "const",
+          "exclusiveMinimum",
+          "exclusiveMaximum",
+          "default",
+          "examples",
+          "deprecated",
+          "readOnly",
+          "writeOnly",
+          "nullable",
+          "title",
+          "description",
+          "format",
+          "contentEncoding",
+          "contentMediaType",
+          "anyOf",
+          "allOf",
+          "oneOf",
+          "any_of",
+          "all_of",
+          "one_of",
+          "not",
+        ].includes(key)
+      ) {
+        continue;
+      }
+
+      cleaned[key] = sanitizeGeminiSchema(innerValue);
+    }
+
+    if (cleaned.properties && typeof cleaned.properties === "object") {
+      const properties = Object.fromEntries(
+        Object.entries(cleaned.properties as Record<string, unknown>).map(([name, schema]) => [
+          name,
+          sanitizeGeminiSchema(schema),
+        ]),
+      );
+      cleaned.properties = properties;
+
+      if (Array.isArray(cleaned.required)) {
+        const valid = new Set(Object.keys(properties));
+        cleaned.required = cleaned.required.filter(
+          (item) => typeof item === "string" && valid.has(item),
+        );
+      }
+    }
+
+    return cleaned;
+  }
+
+  return value;
 }
 
 function buildGeminiPayload(req: NormalizedRequest) {
@@ -53,7 +123,7 @@ function buildGeminiPayload(req: NormalizedRequest) {
           functionDeclarations: req.tools.map((t) => ({
             name: t.name,
             description: t.description ?? "",
-            parameters: t.input_schema,
+            parameters: sanitizeGeminiSchema(t.input_schema),
           })),
         },
       ]
@@ -209,7 +279,7 @@ export const geminiAdapter: ProviderAdapter = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
+      throw new Error(await readProviderError(res, "Gemini", config.gemini.model));
     }
     const data = await res.json();
     return geminiResponseToAnthropic(data);

@@ -3,6 +3,8 @@ import type { TierLimits, TierName } from "./types";
 export interface Config {
   port: number;
   fallbackOrder: TierName[];
+  hasCustomFallbackOrder: boolean;
+  cacheDisabled: boolean;
   groq: {
     apiKey: string;
     baseUrl: string;
@@ -65,20 +67,42 @@ export interface Config {
   };
 }
 
+const defaultFallbackOrder: TierName[] = [
+  "github",
+  "cerebras",
+  "groq",
+  "gemini",
+  "openrouter",
+  "mistral",
+  "nvidia",
+  "cloudflare",
+  "cohere",
+  "local",
+];
+
+function parseFallbackOrder(value?: string): TierName[] {
+  const raw = value
+    ?.split(",")
+    .map((tier) => tier.trim())
+    .filter(Boolean) as string[];
+
+  if (!raw || raw.length === 0) return defaultFallbackOrder;
+
+  const normalized = raw as TierName[];
+  return normalized;
+}
+
+const parseBoolean = (value: string | undefined): boolean => {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(normalized);
+};
+
 export const config: Config = {
   port: Number(process.env.PORT ?? 8787),
-  fallbackOrder: (process.env.FALLBACK_ORDER?.split(",") as TierName[]) ?? [
-    "github",
-    "cerebras",
-    "groq",
-    "gemini",
-    "openrouter",
-    "mistral",
-    "nvidia",
-    "cloudflare",
-    "cohere",
-    "local",
-  ],
+  fallbackOrder: parseFallbackOrder(process.env.FALLBACK_ORDER),
+  hasCustomFallbackOrder: Boolean(process.env.FALLBACK_ORDER?.trim()),
+  cacheDisabled: parseBoolean(process.env.ROUTER_DISABLE_CACHE),
   groq: {
     apiKey: process.env.GROQ_API_KEY ?? "",
     baseUrl: process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1",
@@ -92,7 +116,7 @@ export const config: Config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY ?? "",
     baseUrl: process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta",
-    model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+    model: process.env.GEMINI_MODEL ?? "gemini-3.7-flash",
     limits: {
       rpm: Number(process.env.GEMINI_RPM ?? 15),
       tpm: Number(process.env.GEMINI_TPM ?? 1_000_000),
@@ -102,7 +126,7 @@ export const config: Config = {
   openrouter: {
     apiKey: process.env.OPENROUTER_API_KEY ?? "",
     baseUrl: process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-    model: process.env.OPENROUTER_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free",
+    model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
     limits: {
       rpm: Number(process.env.OPENROUTER_RPM ?? 20),
       tpm: Number(process.env.OPENROUTER_TPM ?? 40_000),

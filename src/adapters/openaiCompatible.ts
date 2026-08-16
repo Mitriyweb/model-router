@@ -7,6 +7,46 @@ import type {
   ToolDefinition,
 } from "../types";
 
+export async function readProviderError(
+  res: Response,
+  provider: string,
+  model: string,
+): Promise<string> {
+  let raw = "";
+  try {
+    raw = await res.clone().text();
+  } catch {
+    raw = "";
+  }
+
+  let detail = "";
+  try {
+    const parsed = JSON.parse(raw);
+    detail = parsed?.error?.message ?? parsed?.message ?? parsed?.error ?? raw;
+  } catch {
+    detail = raw || "unknown upstream error";
+  }
+
+  const normalizedDetail = String(detail).trim();
+  if (!normalizedDetail) {
+    return `${provider} model "${model}" is not available or rejected by the provider (HTTP ${res.status}).`;
+  }
+
+  const lower = normalizedDetail.toLowerCase();
+  if (
+    lower.includes("model not found") ||
+    lower.includes("not found") ||
+    lower.includes("unknown model") ||
+    lower.includes("model unavailable") ||
+    lower.includes("does not exist") ||
+    lower.includes("invalid model")
+  ) {
+    return `${provider} model "${model}" is not available in your account or provider settings: ${normalizedDetail}`;
+  }
+
+  return `${provider} request failed for model "${model}": ${normalizedDetail}`;
+}
+
 export function safeJsonParse(s: string): Record<string, unknown> {
   try {
     return JSON.parse(s);
@@ -248,7 +288,12 @@ export function createOpenAICompatibleStream(
           signal,
         });
         if (!res.ok) {
-          writer.error(`upstream ${res.status}: ${await res.text()}`);
+          const message = await readProviderError(
+            res,
+            model.includes("/") ? "OpenAI-compatible provider" : "OpenAI-compatible provider",
+            model,
+          );
+          writer.error(message);
           return;
         }
         await streamOpenAIToAnthropic(res, model, writer);
