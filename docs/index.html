@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Router</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        header {
+            background: #0078d7;
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+            padding: 0 2rem;
+        }
+        h1, h2, h3 {
+            color: #0078d7;
+        }
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .installation {
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Model Router</h1>
+    </header>
+    <div class="container">
+        <h2>Welcome to Model Router</h2>
+        <p>An Anthropic-compatible proxy that lets Claude Code run on 10 free-tier and local LLM providers instead of the paid Claude API.</p>
+
+        <h3>Supported Providers</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Free Tier Limit</th>
+                    <th>API Type</th>
+                    <th>Best For</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>GitHub Models</td>
+                    <td>15 RPM / 150 RPD</td>
+                    <td>Azure OpenAI</td>
+                    <td>GPT-4o, Claude 3.5 Sonnet, Llama 3.3 70B</td>
+                </tr>
+                <tr>
+                    <td>Cerebras</td>
+                    <td>1M+ tokens / day</td>
+                    <td>OpenAI-compatible</td>
+                    <td>Ultra-fast Llama-3.3-70b batch processing</td>
+                </tr>
+                <tr>
+                    <td>Groq</td>
+                    <td>30 RPM / 6k TPM / 14.4k RPD</td>
+                    <td>OpenAI-compatible</td>
+                    <td>Instant streaming and fast tool calling</td>
+                </tr>
+                <tr>
+                    <td>Google Gemini</td>
+                    <td>15 RPM / 1M TPM / 1.5k RPD</td>
+                    <td>Gemini API</td>
+                    <td>Large context windows (>4k tokens)</td>
+                </tr>
+                <tr>
+                    <td>OpenRouter</td>
+                    <td>20 RPM / 50 RPD (free models)</td>
+                    <td>OpenAI-compatible</td>
+                    <td>Broad selection of open models</td>
+                </tr>
+                <tr>
+                    <td>Mistral AI</td>
+                    <td>2 RPM / 500k TPM / ~1B tpm/mo</td>
+                    <td>OpenAI-compatible</td>
+                    <td>Codestral & Mistral Large</td>
+                </tr>
+                <tr>
+                    <td>NVIDIA NIM</td>
+                    <td>40 RPM / 1,000 requests</td>
+                    <td>OpenAI-compatible</td>
+                    <td>90+ models (Llama, DeepSeek, Phi)</td>
+                </tr>
+                <tr>
+                    <td>Cloudflare AI</td>
+                    <td>60 RPM / 10k RPD</td>
+                    <td>Cloudflare AI</td>
+                    <td>Serverless edge inference</td>
+                </tr>
+                <tr>
+                    <td>Cohere</td>
+                    <td>10 RPM / 100 RPD</td>
+                    <td>Cohere Chat v2</td>
+                    <td>Command R+ with advanced RAG & tool-use</td>
+                </tr>
+                <tr>
+                    <td>Local (Ollama)</td>
+                    <td>Unlimited</td>
+                    <td>OpenAI-compatible</td>
+                    <td>Fully offline & private execution</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Quick Installation</h3>
+        <div class="installation">
+            <p>Install <code>model-router</code> binary with one command:</p>
+            <pre><code>curl -fsSL https://raw.githubusercontent.com/Mitriyweb/model-router/main/install.sh | bash</code></pre>
+            <p>Or install via Bun:</p>
+            <pre><code>git clone https://github.com/Mitriyweb/model-router.git
+cd model-router
+bun install
+bun run build</code></pre>
+        </div>
+
+        <h3>Configuration</h3>
+        <p>Copy <code>.env.example</code> to <code>.env</code> and fill in any keys you have:</p>
+        <pre><code>cp .env.example .env</code></pre>
+        <p>Example configuration for GitHub Models:</p>
+        <pre><code>GITHUB_TOKEN=ghp_...
+GITHUB_MODELS_MODEL=gpt-4o
+GITHUB_MODELS_RPM=15
+GITHUB_MODELS_TPM=64000
+GITHUB_MODELS_RPD=150</code></pre>
+
+        <h3>Usage</h3>
+        <p>Start the proxy:</p>
+        <pre><code>model-router</code></pre>
+        <p>Or using Bun:</p>
+        <pre><code>bun run start</code></pre>
+        <p>Connect Claude Code:</p>
+        <pre><code>ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude</code></pre>
+
+        <h3>Development</h3>
+        <p>Run with hot reloading:</p>
+        <pre><code>bun run dev</code></pre>
+        <p>Run full validation:</p>
+        <pre><code>bun run validate</code></pre>
+        <p>Compile standalone binary:</p>
+        <pre><code>bun run build</code></pre>
+    </div>
+    <footer>
+        <p>&copy; 2023 Model Router. All rights reserved.</p>
+    </footer>
+</body>
+</html>

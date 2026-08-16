@@ -1,6 +1,6 @@
 # model-router
 
-Anthropic-compatible proxy that lets Claude Code run on **10 free-tier and local LLM providers** instead of the paid Claude API.
+Universal AI proxy that allows **Claude Code**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, and custom Chat UIs to run on **10 free-tier and local LLM providers** instead of expensive paid APIs.
 
 ## Supported Providers
 
@@ -19,6 +19,15 @@ Anthropic-compatible proxy that lets Claude Code run on **10 free-tier and local
 
 ---
 
+## Dual API Architecture
+
+`model-router` simultaneously exposes two standard APIs on port `8787`:
+
+1. **Anthropic API** (`POST /v1/messages`): For Claude Code and Anthropic clients.
+2. **OpenAI API** (`POST /v1/chat/completions` & `GET /v1/models`): For ZeroClaw, Aider, Cline, Roo Code, Cursor, Continue.dev, and Web Chat interfaces.
+
+---
+
 ## Quick Install
 
 Install `model-router` binary with one command:
@@ -27,89 +36,179 @@ Install `model-router` binary with one command:
 curl -fsSL https://raw.githubusercontent.com/Mitriyweb/model-router/main/install.sh | bash
 ```
 
-Or install via Bun:
+Or run via Bun:
 
 ```bash
 git clone https://github.com/Mitriyweb/model-router.git
 cd model-router
-bun install
-bun run build
-```
-
----
-
-## How it works
-
-Claude Code sends requests in Anthropic's `/v1/messages` format. This server exposes that same endpoint, but internally:
-
-1. **Estimates request size** (input tokens) via `gpt-tokenizer` (`cl100k_base`).
-2. **Plans tier order** (`src/router.ts: planTierOrder`):
-   - Big context (>4k tokens) → Gemini Flash first (huge 1M TPM budget).
-   - Otherwise → walks configured `FALLBACK_ORDER`.
-3. **Applies policies & checks health**:
-   - `exact-repeat-from-cache` checks SHA-256 request cache to return instant 0-token responses.
-   - For each tier: checks API key / token, context fit, and in-memory rate limiter quotas.
-   - On error or rate limit, automatically falls through to the next tier.
-4. **Translates streaming & non-streaming responses** back to Anthropic SSE format with full tool calling (`tool_use` / `tool_result`) support.
-
----
-
-## Usage
-
-### 1. Configure Environment
-
-Copy `.env.example` to `.env` and fill in any keys you have:
-
-```bash
 cp .env.example .env
-```
-
-### 2. Start the Proxy
-
-```bash
-# Using installed binary:
-model-router
-
-# Or using Bun:
+bun install
 bun run start
 ```
 
-### 3. Connect Claude Code
+---
 
-Run Claude Code pointing to your local proxy:
+## Client Setup & Integrations
+
+### 1. Claude Code
 
 ```bash
 ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude
 ```
 
-> **Tip:** You can set a permanent alias in your `~/.zshrc` (or `~/.bashrc`):
+> **Alias Tip:** Add to your `~/.zshrc`:
 > ```bash
 > echo 'alias claude-free="ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude"' >> ~/.zshrc
-> source ~/.zshrc
 > ```
-> And simply launch it with `claude-free`.
 
-Check tier usage & rate limits anytime:
+---
+
+### 2. ZeroClaw & Claw Analogs
+
+ZeroClaw connects directly via the OpenAI Chat Completions endpoint:
 
 ```bash
-curl http://localhost:8787/status
+export OPENAI_BASE_URL="http://localhost:8787/v1"
+export OPENAI_API_KEY="dummy"
+zeroclaw --model model-router-auto
 ```
 
 ---
 
-## Development
+### 3. Aider
+
+```bash
+export OPENAI_API_BASE="http://localhost:8787/v1"
+export OPENAI_API_KEY="dummy"
+aider --model openai/model-router-auto
+```
+
+---
+
+### 4. Cline / Roo Code / Continue.dev / Cursor
+
+- **Provider**: `OpenAI Compatible`
+- **Base URL**: `http://localhost:8787/v1`
+- **API Key**: `dummy`
+- **Model ID**: `model-router-auto` (or `gpt-4o`, `codestral-latest`, `llama-3.3-70b`)
+
+---
+
+## SSE Streaming (Server-Sent Events)
+
+`model-router` supports real-time Server-Sent Events (SSE) streaming for both OpenAI and Anthropic formats.
+
+### A. OpenAI SSE Stream (`/v1/chat/completions`)
+
+Used by ZeroClaw, Aider, LangChain, and Web Chat UIs.
+
+#### 1. CLI with `curl`:
+```bash
+curl -N -X POST http://localhost:8787/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "model-router-auto",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Explain quicksort in 2 sentences."}
+    ]
+  }'
+```
+**Stream Chunk Format:**
+```text
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Quicksort"},"finish_reason":null}]}
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" is a divide-and-conquer"},"finish_reason":null}]}
+...
+data: [DONE]
+```
+
+#### 2. JavaScript / TypeScript Frontend Example:
+```javascript
+const response = await fetch("http://localhost:8787/v1/chat/completions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    model: "model-router-auto",
+    stream: true,
+    messages: [{ role: "user", content: "Hello!" }],
+  }),
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+let buffer = "";
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  buffer += decoder.decode(value, { stream: true });
+  const lines = buffer.split("\n");
+  buffer = lines.pop() || "";
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    const data = trimmed.slice(5).trim();
+    if (data === "[DONE]") break;
+    const chunk = JSON.parse(data);
+    const content = chunk.choices?.[0]?.delta?.content;
+    if (content) process.stdout.write(content);
+  }
+}
+```
+
+---
+
+### B. Anthropic SSE Stream (`/v1/messages`)
+
+Used by Claude Code and Anthropic clients.
+
+```bash
+curl -N -X POST http://localhost:8787/v1/messages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'
+```
+**Stream Events Format:**
+```text
+event: message_start
+data: {"type":"message_start","message":{"id":"...","role":"assistant","content":[],"usage":{"input_tokens":10}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello!"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}
+
+event: message_stop
+data: {"type":"message_stop"}
+```
+
+---
+
+## Development & Testing
 
 ```bash
 # Run with hot reloading
 bun run dev
 
-# Run full validation (typecheck + lint + tests)
+# Run complete validation (typecheck + lint + tests)
 bun run validate
 
-# Compile standalone binary
+# Compile standalone executable
 bun run build
 
-# Compile all platform binaries (darwin-arm64, darwin-x64, linux-x64, linux-arm64)
+# Compile all platform binaries
 bun run build:all
 ```
 

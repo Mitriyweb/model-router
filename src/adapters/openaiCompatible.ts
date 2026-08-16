@@ -1,5 +1,11 @@
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
-import type { AnthropicResponse, ContentBlock, NormalizedRequest, ToolDefinition } from "../types";
+import type {
+  AnthropicMessage,
+  AnthropicResponse,
+  ContentBlock,
+  NormalizedRequest,
+  ToolDefinition,
+} from "../types";
 
 export function safeJsonParse(s: string): Record<string, unknown> {
   try {
@@ -20,6 +26,122 @@ export function anthropicToolsToOpenAI(tools: ToolDefinition[]) {
   }));
 }
 
+export function openAIToolsToAnthropic(tools: any[]): ToolDefinition[] {
+  if (!Array.isArray(tools)) return [];
+  return tools.map((t) => ({
+    name: t.function?.name ?? t.name ?? "",
+    description: t.function?.description ?? t.description,
+    input_schema: t.function?.parameters ?? t.parameters ?? { type: "object", properties: {} },
+  }));
+}
+
+export function openAIRequestToNormalized(body: any): NormalizedRequest {
+  let systemPrompt = "";
+  const messages: AnthropicMessage[] = [];
+
+  for (const m of body.messages ?? []) {
+    if (m.role === "system") {
+      systemPrompt = systemPrompt ? `${systemPrompt}\n${m.content}` : (m.content ?? "");
+    } else if (m.role === "user") {
+      messages.push({
+        role: "user",
+        content: m.content ?? "",
+      });
+    } else if (m.role === "assistant") {
+      const content: ContentBlock[] = [];
+      if (m.content) {
+        content.push({ type: "text", text: m.content });
+      }
+      for (const tc of m.tool_calls ?? []) {
+        content.push({
+          type: "tool_use",
+          id: tc.id ?? crypto.randomUUID(),
+          name: tc.function?.name ?? "",
+          input: safeJsonParse(tc.function?.arguments ?? "{}"),
+        });
+      }
+      messages.push({
+        role: "assistant",
+        content: content.length === 1 && content[0].type === "text" ? content[0].text : content,
+      });
+    } else if (m.role === "tool") {
+      // OpenAI tool response maps to Anthropic user turn with tool_result block
+      messages.push({
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: m.tool_call_id ?? "",
+            content: m.content ?? "",
+          },
+        ],
+      });
+    }
+  }
+
+  return {
+    systemPrompt,
+    messages,
+    tools: openAIToolsToAnthropic(body.tools ?? []),
+    maxTokens: body.max_tokens ?? body.max_completion_tokens,
+    temperature: body.temperature,
+    stream: body.stream ?? false,
+  };
+}
+
+export function anthropicResponseToOpenAI(
+  response: AnthropicResponse,
+  requestedModel = "model-router-auto",
+) {
+  let content = "";
+  const toolCalls: any[] = [];
+
+  for (const block of response.content) {
+    if (block.type === "text") {
+      content += block.text;
+    } else if (block.type === "tool_use") {
+      toolCalls.push({
+        id: block.id,
+        type: "function",
+        function: {
+          name: block.name,
+          arguments: JSON.stringify(block.input ?? {}),
+        },
+      });
+    }
+  }
+
+  const finishReason =
+    response.stop_reason === "tool_use"
+      ? "tool_calls"
+      : response.stop_reason === "max_tokens"
+        ? "length"
+        : "stop";
+
+  return {
+    id: `chatcmpl-${response.id}`,
+    object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
+    model: requestedModel || response.model,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content: content || null,
+          tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
+        },
+        finish_reason: finishReason,
+      },
+    ],
+    usage: {
+      prompt_tokens: response.usage.input_tokens,
+      completion_tokens: response.usage.output_tokens,
+      total_tokens: response.usage.input_tokens + response.usage.output_tokens,
+    },
+  };
+}
+
 export function buildOpenAIPayload(req: NormalizedRequest, model: string) {
   const messages: any[] = [];
   if (req.systemPrompt) {
@@ -37,7 +159,6 @@ export function buildOpenAIPayload(req: NormalizedRequest, model: string) {
     const textBlocks = m.content.filter((b) => b.type === "text") as any[];
     const textParts = textBlocks.map((b) => b.text).join("\n");
 
-    // Tool results become role: "tool" messages
     for (const tr of toolResults) {
       messages.push({
         role: "tool",
@@ -46,7 +167,6 @@ export function buildOpenAIPayload(req: NormalizedRequest, model: string) {
       });
     }
 
-    // If there were tool uses in an assistant message
     if (toolUses.length > 0) {
       messages.push({
         role: "assistant",
