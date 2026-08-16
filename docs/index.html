@@ -215,7 +215,8 @@
   <div class="nav-logo">model<span>-</span>router</div>
   <div class="nav-links">
     <a href="#providers">Providers</a>
-    <a href="#clients">Clients</a>
+    <a href="#claude-code">Claude Code</a>
+    <a href="#clients">Other Clients</a>
     <a href="#install">Install</a>
   </div>
   <a class="nav-cta" href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">GitHub ↗</a>
@@ -334,13 +335,85 @@
   </div>
 </section>
 
+<!-- CLAUDE CODE -->
+<section id="claude-code">
+  <h2>Claude Code Setup</h2>
+  <p class="section-sub">Run Claude Code completely free — using your own LLM provider keys instead of the Anthropic API.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-bottom:2rem">
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
+      <div style="font-weight:600;margin-bottom:0.8rem;display:flex;align-items:center;gap:0.5rem">① Start model-router</div>
+      <div class="code-block">
+        <span class="cmd2">bun run dev</span><br>
+        <span style="color:#6c63ff"># or use the installed binary:</span><br>
+        <span class="cmd2">model-router</span>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.8rem">Server starts on <strong style="color:var(--accent2)">http://localhost:8787</strong></p>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
+      <div style="font-weight:600;margin-bottom:0.8rem">② Set environment variables</div>
+      <div class="code-block">
+        <span class="kw">export</span> <span class="val">ANTHROPIC_BASE_URL</span>=http://localhost:8787<br>
+        <span class="kw">export</span> <span class="val">ANTHROPIC_API_KEY</span>=dummy
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.8rem">Any non-empty string works as API key — it's never sent upstream.</p>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
+      <div style="font-weight:600;margin-bottom:0.8rem">③ Launch Claude Code</div>
+      <div class="code-block">
+        <span class="cmd2">claude</span>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.8rem">Claude Code connects and starts — your requests go to the free provider.</p>
+    </div>
+
+  </div>
+
+  <!-- ALIAS TIP -->
+  <div style="background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.25);border-radius:var(--radius);padding:1.4rem;margin-bottom:2rem">
+    <div style="font-weight:600;margin-bottom:0.6rem;color:#a5a0ff">💡 Tip — Add a permanent alias</div>
+    <div class="code-block">
+      <span class="cmd2">echo</span> <span class="val">'alias claude-free="ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude"'</span> >> ~/.zshrc<br>
+      <span class="cmd2">source</span> ~/.zshrc<br><br>
+      <span style="color:#6c63ff"># Then just run:</span><br>
+      <span class="cmd2">claude-free</span>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
+      <div style="font-weight:600;margin-bottom:0.6rem">Why does it show "Opus 5"?</div>
+      <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6">Claude Code's UI displays its own model labels regardless of the backend. Your requests are actually processed by whichever free provider is active (Mistral, Groq, etc.).</p>
+      <p style="font-size:0.83rem;color:var(--text-muted);margin-top:0.6rem">To verify, check the <strong style="color:var(--accent2)">bun run dev</strong> terminal — it logs <code style="color:#e06c75">[router] streaming via mistral</code> for every request.</p>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
+      <div style="font-weight:600;margin-bottom:0.6rem">How to verify the active provider?</div>
+      <div class="code-block" style="margin-bottom:0.8rem">
+        <span class="cmd2">curl</span> http://localhost:8787/status
+      </div>
+      <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6">Shows request counts and token usage per provider in real time.</p>
+      <p style="font-size:0.83rem;color:var(--text-muted);margin-top:0.6rem">Or ask inside Claude Code: <em>"What model are you?"</em> — Mistral will answer with its identity.</p>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
+      <div style="font-weight:600;margin-bottom:0.6rem">Got 502 errors?</div>
+      <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6">You hit the rate limit of your only active provider. Fix: add more provider keys to <code style="color:#e06c75">.env</code> and set a fallback chain:</p>
+      <div class="code-block" style="margin-top:0.6rem">
+        <span class="val">FALLBACK_ORDER</span>=mistral,groq,gemini,cerebras
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- CLIENTS -->
 <section id="clients">
-  <h2>Client Setup</h2>
+  <h2>Other Clients</h2>
   <p class="section-sub">Works with any Anthropic or OpenAI-compatible tool.</p>
   <div class="clients-grid">
     <div class="client-card">
-      <div class="client-title"><span class="client-icon">🤖</span> Claude Code</div>
+      <div class="client-title"><span class="client-icon">🤖</span> Claude Code <a href="#claude-code" style="font-size:0.75rem;color:var(--accent);text-decoration:none;margin-left:auto">Full guide ↑</a></div>
       <div class="code-block">
         <span class="kw">export</span> <span class="val">ANTHROPIC_BASE_URL</span>=http://localhost:8787<br>
         <span class="kw">export</span> <span class="val">ANTHROPIC_API_KEY</span>=dummy<br>
