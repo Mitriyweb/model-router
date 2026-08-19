@@ -28,7 +28,7 @@ Environment Variables:
 }
 
 if (args.includes("--version") || args.includes("-v")) {
-  console.log("model-router v0.1.0");
+  console.log("model-router v0.1.2");
   process.exit(0);
 }
 
