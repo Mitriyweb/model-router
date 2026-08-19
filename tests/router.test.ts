@@ -1,5 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
+import { cerebrasAdapter } from "../src/adapters/cerebras";
 import { sanitizeGeminiSchema } from "../src/adapters/gemini";
+import { groqAdapter } from "../src/adapters/groq";
 import { readProviderError } from "../src/adapters/openaiCompatible";
 import { config } from "../src/config";
 import { POLICIES } from "../src/policies";
@@ -28,14 +30,34 @@ describe("router", () => {
       stream: false,
     };
 
-    expect(planTierOrder(smallReq, 50)).toEqual(config.fallbackOrder);
+    const originalFallback = [...config.fallbackOrder];
+    const originalHasCustom = config.hasCustomFallbackOrder;
+    config.fallbackOrder = [
+      "cerebras",
+      "groq",
+      "gemini",
+      "openrouter",
+      "mistral",
+      "nvidia",
+      "cloudflare",
+      "cohere",
+      "local",
+    ];
+    config.hasCustomFallbackOrder = false;
 
-    // Large context (>4000 tokens) prefers Gemini first
-    const largePlan = planTierOrder(smallReq, 5000);
-    expect(largePlan[0]).toBe("gemini");
+    try {
+      expect(planTierOrder(smallReq, 50)).toEqual(config.fallbackOrder);
 
-    // Force private stays completely local
-    expect(planTierOrder(smallReq, 50, { forcePrivate: true })).toEqual(["local"]);
+      // Large context (>4000 tokens) prefers Gemini first
+      const largePlan = planTierOrder(smallReq, 5000);
+      expect(largePlan[0]).toBe("gemini");
+
+      // Force private stays completely local
+      expect(planTierOrder(smallReq, 50, { forcePrivate: true })).toEqual(["local"]);
+    } finally {
+      config.fallbackOrder = originalFallback;
+      config.hasCustomFallbackOrder = originalHasCustom;
+    }
   });
 
   it("respects explicit fallback order even for larger requests", () => {
@@ -56,6 +78,42 @@ describe("router", () => {
     } finally {
       config.fallbackOrder = originalFallback;
       config.hasCustomFallbackOrder = originalHasCustom;
+    }
+  });
+
+  it("does not use Groq TPM budget as a request-size cap", () => {
+    const req: NormalizedRequest = {
+      systemPrompt: "Hi",
+      messages: [{ role: "user", content: "Hello there! This is a normal request." }],
+      tools: [],
+      stream: false,
+    };
+
+    const previousTpm = config.groq.limits.tpm;
+    config.groq.limits.tpm = 2000;
+
+    try {
+      expect(groqAdapter.canHandle(req, 5000)).toBe(true);
+    } finally {
+      config.groq.limits.tpm = previousTpm;
+    }
+  });
+
+  it("does not use Cerebras TPM budget as a request-size cap", () => {
+    const req: NormalizedRequest = {
+      systemPrompt: "Hi",
+      messages: [{ role: "user", content: "Hello there! This is a normal request." }],
+      tools: [],
+      stream: false,
+    };
+
+    const previousTpm = config.cerebras.limits.tpm;
+    config.cerebras.limits.tpm = 2000;
+
+    try {
+      expect(cerebrasAdapter.canHandle(req, 5000)).toBe(true);
+    } finally {
+      config.cerebras.limits.tpm = previousTpm;
     }
   });
 

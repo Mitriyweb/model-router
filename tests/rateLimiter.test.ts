@@ -42,4 +42,22 @@ describe("rateLimiter", () => {
     rateLimiter.reset();
     expect(rateLimiter.canServe("gemini", limits, 10)).toBe(true);
   });
+
+  it("logs the limiter snapshot when a provider is skipped for rate limits", () => {
+    rateLimiter.reset();
+    const warn = console.warn;
+    const calls: any[] = [];
+    console.warn = (...args: any[]) => calls.push(args);
+
+    try {
+      const limits = { rpm: 1, tpm: 10, rpd: 1 };
+      rateLimiter.record("groq", 10);
+      expect(rateLimiter.canServe("groq", limits, 1)).toBe(false);
+      expect(calls.some(([msg]) => String(msg).includes("groq skip: rate limit reached"))).toBe(
+        true,
+      );
+    } finally {
+      console.warn = warn;
+    }
+  });
 });

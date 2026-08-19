@@ -55,13 +55,90 @@ export function safeJsonParse(s: string): Record<string, unknown> {
   }
 }
 
+export const OPENAI_COMPATIBLE_CONTEXT_LIMIT = 128_000;
+
+export function fitsOpenAICompatibleContext(
+  estimatedTokens: number,
+  maxContext = OPENAI_COMPATIBLE_CONTEXT_LIMIT,
+): boolean {
+  return estimatedTokens <= maxContext;
+}
+
+export function sanitizeOpenAICompatibleSchema(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeOpenAICompatibleSchema(item));
+  }
+
+  if (value && typeof value === "object") {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, innerValue] of Object.entries(value as Record<string, unknown>)) {
+      if (
+        [
+          "$schema",
+          "$defs",
+          "definitions",
+          "additionalProperties",
+          "propertyNames",
+          "const",
+          "exclusiveMinimum",
+          "exclusiveMaximum",
+          "default",
+          "examples",
+          "deprecated",
+          "readOnly",
+          "writeOnly",
+          "nullable",
+          "title",
+          "description",
+          "format",
+          "contentEncoding",
+          "contentMediaType",
+          "pattern",
+          "anyOf",
+          "allOf",
+          "oneOf",
+          "any_of",
+          "all_of",
+          "one_of",
+          "not",
+        ].includes(key)
+      ) {
+        continue;
+      }
+
+      cleaned[key] = sanitizeOpenAICompatibleSchema(innerValue);
+    }
+
+    if (cleaned.properties && typeof cleaned.properties === "object") {
+      const properties = Object.fromEntries(
+        Object.entries(cleaned.properties as Record<string, unknown>).map(([name, schema]) => [
+          name,
+          sanitizeOpenAICompatibleSchema(schema),
+        ]),
+      );
+      cleaned.properties = properties;
+
+      if (Array.isArray(cleaned.required)) {
+        const valid = new Set(Object.keys(properties));
+        cleaned.required = cleaned.required.filter(
+          (item) => typeof item === "string" && valid.has(item),
+        );
+      }
+    }
+
+    return cleaned;
+  }
+
+  return value;
+}
+
 export function anthropicToolsToOpenAI(tools: ToolDefinition[]) {
   return tools.map((t) => ({
     type: "function" as const,
     function: {
       name: t.name,
       description: t.description ?? "",
-      parameters: t.input_schema,
+      parameters: sanitizeOpenAICompatibleSchema(t.input_schema),
     },
   }));
 }
@@ -237,8 +314,11 @@ export function openAIResponseToAnthropic(data: any, model: string): AnthropicRe
   const message = choice?.message ?? {};
   const content: ContentBlock[] = [];
 
-  if (message.content) {
-    content.push({ type: "text", text: message.content });
+  const textCandidates = [message.content, message.reasoning].filter((v) => typeof v === "string");
+  const mainText = textCandidates.join("\n").trim();
+
+  if (mainText) {
+    content.push({ type: "text", text: mainText });
   }
   for (const call of message.tool_calls ?? []) {
     content.push({

@@ -41,12 +41,6 @@ export interface Config {
     model: string;
     limits: TierLimits;
   };
-  github: {
-    token: string;
-    baseUrl: string;
-    model: string;
-    limits: TierLimits;
-  };
   cloudflare: {
     apiToken: string;
     accountId: string;
@@ -68,7 +62,6 @@ export interface Config {
 }
 
 const defaultFallbackOrder: TierName[] = [
-  "github",
   "cerebras",
   "groq",
   "gemini",
@@ -161,16 +154,6 @@ export const config: Config = {
       rpm: Number(process.env.NVIDIA_RPM ?? 40),
       tpm: Number(process.env.NVIDIA_TPM ?? 40_000),
       rpd: Number(process.env.NVIDIA_RPD ?? 1000),
-    },
-  },
-  github: {
-    token: process.env.GITHUB_TOKEN ?? process.env.GITHUB_MODELS_TOKEN ?? "",
-    baseUrl: process.env.GITHUB_MODELS_BASE_URL ?? "https://models.inference.ai.azure.com",
-    model: process.env.GITHUB_MODELS_MODEL ?? "gpt-4o",
-    limits: {
-      rpm: Number(process.env.GITHUB_MODELS_RPM ?? 15),
-      tpm: Number(process.env.GITHUB_MODELS_TPM ?? 64_000),
-      rpd: Number(process.env.GITHUB_MODELS_RPD ?? 150),
     },
   },
   cloudflare: {

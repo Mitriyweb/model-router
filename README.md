@@ -1,13 +1,12 @@
 # model-router
 
-Universal AI proxy that allows **Claude Code**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, and custom Chat UIs to run on **10 free-tier and local LLM providers** instead of expensive paid APIs.
+Universal AI proxy that allows **Claude Code**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, and custom Chat UIs to run on **9 free-tier and local LLM providers** instead of expensive paid APIs.
 
 ## Supported Providers
 
 | Provider | Free Tier Limit | API Type | Best For |
 |---|---|---|---|
-| **GitHub Models** | 15 RPM / 150 RPD | Azure OpenAI | GPT-4o, Claude 3.5 Sonnet, Llama 3.3 70B |
-| **Cerebras** | 1M+ tokens / day | OpenAI-compatible | Ultra-fast Llama-3.3-70b batch processing |
+| **Cerebras** | Trial: 1M+ tokens / day | OpenAI-compatible | Ultra-fast Llama-3.3-70b batch processing |
 | **Groq** | 30 RPM / 6k TPM / 14.4k RPD | OpenAI-compatible | Instant streaming and fast tool calling |
 | **Google Gemini** | 15 RPM / 1M TPM / 1.5k RPD | Gemini API | Large context windows (>4k tokens) |
 | **OpenRouter** | 20 RPM / 50 RPD (free models) | OpenAI-compatible | Broad selection of open models |
@@ -92,7 +91,7 @@ aider --model openai/model-router-auto
 - **Provider**: `OpenAI Compatible`
 - **Base URL**: `http://localhost:8787/v1`
 - **API Key**: `dummy`
-- **Model ID**: `model-router-auto` (or `gpt-4o`, `codestral-latest`, `llama-3.3-70b`)
+- **Model ID**: `model-router-auto` (or `codestral-latest`, `llama-3.3-70b`, `gemini-3.7-flash`)
 
 ---
 

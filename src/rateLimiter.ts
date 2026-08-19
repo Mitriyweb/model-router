@@ -32,6 +32,17 @@ export class RateLimiter {
           this.usage.set(tier as TierName, usage);
         }
       }
+      const now = Date.now();
+      for (const [tier, usage] of this.usage.entries()) {
+        this.prune(usage, now);
+        if (
+          usage.requestTimestamps.length === 0 &&
+          usage.tokenTimestamps.length === 0 &&
+          usage.dayTimestamps.length === 0
+        ) {
+          this.usage.delete(tier as TierName);
+        }
+      }
     } catch (err) {
       console.warn(`[rateLimiter] couldn't load ${STATE_FILE}, starting fresh:`, err);
     }
@@ -65,18 +76,28 @@ export class RateLimiter {
 
   canServe(tier: TierName, limits: TierLimits, estimatedTokens: number): boolean {
     const now = Date.now();
-    if ((this.unavailableUntil.get(tier) ?? 0) > now) return false;
+    if ((this.unavailableUntil.get(tier) ?? 0) > now) {
+      console.warn(
+        `[rateLimiter] ${tier} unavailable until ${new Date(this.unavailableUntil.get(tier) ?? now).toISOString()}`,
+      );
+      return false;
+    }
 
     const usage = this.getUsage(tier);
     this.prune(usage, now);
 
     const tokensInWindow = usage.tokenTimestamps.reduce((sum, t) => sum + t.tokens, 0);
-
-    return (
+    const snapshot = this.snapshot(tier, limits);
+    const canServe =
       usage.requestTimestamps.length < limits.rpm &&
       usage.dayTimestamps.length < limits.rpd &&
-      tokensInWindow + estimatedTokens <= limits.tpm
-    );
+      tokensInWindow + estimatedTokens <= limits.tpm;
+
+    if (!canServe) {
+      console.warn(`[rateLimiter] ${tier} skip: rate limit reached`, JSON.stringify(snapshot));
+    }
+
+    return canServe;
   }
 
   record(tier: TierName, tokensUsed: number) {
@@ -112,6 +133,7 @@ export class RateLimiter {
   reset() {
     this.usage.clear();
     this.unavailableUntil.clear();
+    this.scheduleSave();
   }
 }
 

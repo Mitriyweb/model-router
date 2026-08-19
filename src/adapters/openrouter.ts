@@ -3,6 +3,7 @@ import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
   buildOpenAIPayload,
   createOpenAICompatibleStream,
+  fitsOpenAICompatibleContext,
   openAIResponseToAnthropic,
   readProviderError,
 } from "./openaiCompatible";
@@ -11,7 +12,7 @@ export const openrouterAdapter: ProviderAdapter = {
   tier: "openrouter",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    return estimatedTokens <= config.openrouter.limits.tpm;
+    return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
   async send(req: NormalizedRequest) {

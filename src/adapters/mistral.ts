@@ -3,6 +3,7 @@ import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
   buildOpenAIPayload,
   createOpenAICompatibleStream,
+  fitsOpenAICompatibleContext,
   openAIResponseToAnthropic,
 } from "./openaiCompatible";
 
@@ -10,7 +11,7 @@ export const mistralAdapter: ProviderAdapter = {
   tier: "mistral",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    return estimatedTokens <= config.mistral.limits.tpm;
+    return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
   async send(req: NormalizedRequest) {

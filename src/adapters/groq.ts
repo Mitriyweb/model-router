@@ -3,6 +3,7 @@ import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
   buildOpenAIPayload,
   createOpenAICompatibleStream,
+  fitsOpenAICompatibleContext,
   openAIResponseToAnthropic,
 } from "./openaiCompatible";
 
@@ -10,8 +11,7 @@ export const groqAdapter: ProviderAdapter = {
   tier: "groq",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    // Groq free tier limit: 6000 TPM limit
-    return estimatedTokens <= config.groq.limits.tpm;
+    return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
   async send(req: NormalizedRequest) {
@@ -27,10 +27,13 @@ export const groqAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(`Groq error ${res.status}: ${await res.text()}`);
+      const raw = await res.text();
+      console.warn("[groq] upstream error body:", raw);
+      throw new Error(`Groq error ${res.status}: ${raw}`);
     }
 
     const data = await res.json();
+    console.log("[groq] upstream response:", JSON.stringify(data).slice(0, 1200));
     return openAIResponseToAnthropic(data, config.groq.model);
   },
 

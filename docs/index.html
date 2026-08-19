@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>model-router — Universal Free LLM Proxy</title>
-  <meta name="description" content="Universal AI proxy. Run Claude Code, ZeroClaw, Aider, and Cline on 10 free-tier LLM providers — GitHub Models, Mistral, Groq, Gemini, Cerebras, and more." />
+  <meta name="description" content="Universal AI proxy. Run Claude Code, ZeroClaw, Aider, and Cline on 9 free-tier LLM providers — Mistral, Groq, Gemini, Cerebras, OpenRouter, and more." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -224,9 +224,9 @@
 
 <!-- HERO -->
 <div class="hero">
-  <div class="badge">Open Source · Free Tier · 10 Providers</div>
+  <div class="badge">Open Source · Free Tier · 9 Providers</div>
   <h1>Universal <span class="grad">Free LLM</span> Proxy</h1>
-  <p>Run Claude Code, ZeroClaw, Aider, and Cline on <strong>10 free-tier providers</strong> instead of paying for the Claude API.</p>
+  <p>Run Claude Code, ZeroClaw, Aider, and Cline on <strong>9 free-tier providers</strong> instead of paying for the Claude API.</p>
   <div class="hero-actions">
     <a class="btn-primary" href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">View on GitHub</a>
     <a class="btn-secondary" href="#claude-code">Claude Code Setup</a>
@@ -266,10 +266,10 @@
 
 <!-- STATS -->
 <div class="stats">
-  <div class="stat"><div class="stat-num"><span class="accent">10</span></div><div class="stat-label">Free providers</div></div>
+  <div class="stat"><div class="stat-num"><span class="accent">9</span></div><div class="stat-label">Free providers</div></div>
   <div class="stat"><div class="stat-num"><span class="accent">2</span></div><div class="stat-label">API formats (Anthropic + OpenAI)</div></div>
   <div class="stat"><div class="stat-num"><span class="accent">$0</span></div><div class="stat-label">Monthly API cost possible</div></div>
-  <div class="stat"><div class="stat-num"><span class="accent">1M+</span></div><div class="stat-label">Tokens/day (Cerebras free tier)</div></div>
+  <div class="stat"><div class="stat-num"><span class="accent">1M+</span></div><div class="stat-label">Tokens/day (Cerebras trial)</div></div>
 </div>
 
 <!-- PROVIDERS -->
@@ -278,14 +278,9 @@
   <p class="section-sub">All free tiers — configure only the ones you have keys for.</p>
   <div class="providers-grid">
     <div class="provider-card">
-      <div class="provider-header"><span class="provider-name">GitHub Models</span><span class="provider-tag free">Free</span></div>
-      <div class="provider-limit">15 RPM / 150 RPD</div>
-      <div class="provider-desc">GPT-4o, Claude 3.5 Sonnet, Llama 3.3 70B via Azure OpenAI</div>
-    </div>
-    <div class="provider-card">
-      <div class="provider-header"><span class="provider-name">Cerebras</span><span class="provider-tag free">Free</span></div>
+      <div class="provider-header"><span class="provider-name">Cerebras</span><span class="provider-tag free">Trial</span></div>
       <div class="provider-limit">1M+ tokens / day</div>
-      <div class="provider-desc">Ultra-fast Llama-3.3-70b, largest daily token budget of all free tiers</div>
+      <div class="provider-desc">Ultra-fast Llama-3.3-70b, trial-tier daily budget with finite usage</div>
     </div>
     <div class="provider-card">
       <div class="provider-header"><span class="provider-name">Groq</span><span class="provider-tag free">Free</span></div>
@@ -333,7 +328,7 @@
 <!-- HOW IT WORKS -->
 <section>
   <h2>How It Works</h2>
-  <p class="section-sub">One proxy, two API formats, ten providers — automatic fallback and rate limiting built-in.</p>
+  <p class="section-sub">One proxy, two API formats, nine providers — automatic fallback and rate limiting built-in.</p>
   <div class="arch">
 <pre>
   <span class="hi">Claude Code</span>                    <span class="hi">ZeroClaw / Aider / Cline</span>
@@ -348,9 +343,9 @@
                          │
         ┌────────────────┼────────────────┐
         ▼                ▼                ▼
-  <span class="hi3">GitHub Models</span>     <span class="hi3">Mistral</span>         <span class="hi3">Cerebras</span>
-  <span class="hi3">Groq</span>             <span class="hi3">Gemini</span>          <span class="hi3">Ollama</span>
-  ...and 4 more
+  <span class="hi3">Mistral</span>         <span class="hi3">Cerebras</span>          <span class="hi3">Groq</span>
+  <span class="hi3">Gemini</span>           <span class="hi3">OpenRouter</span>      <span class="hi3">Ollama</span>
+  ...and 3 more
 </pre>
   </div>
 </section>

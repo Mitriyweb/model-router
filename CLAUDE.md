@@ -1,11 +1,11 @@
 # model-router
 
-Universal AI proxy that routes Claude Code, ZeroClaw, Aider, Cline, and any OpenAI-compatible client through **10 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
+Universal AI proxy that routes Claude Code, ZeroClaw, Aider, Cline, and any OpenAI-compatible client through **9 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
 
 ## Key Features
 
 - **Dual API**: Anthropic (`/v1/messages`) + OpenAI (`/v1/chat/completions`, `/v1/models`) on the same port
-- **10 providers**: GitHub Models, Cerebras, Groq, Gemini, OpenRouter, Mistral, NVIDIA NIM, Cloudflare AI, Cohere, Local (Ollama)
+- **9 providers**: Cerebras, Groq, Gemini, OpenRouter, Mistral, NVIDIA NIM, Cloudflare AI, Cohere, Local (Ollama)
 - **Automatic fallback**: Tries providers in order, skips rate-limited or unconfigured ones
 - **SHA-256 cache**: Exact-repeat requests served instantly without hitting upstream
 - **SSE streaming**: Anthropic and OpenAI event formats, bidirectional converters
@@ -20,7 +20,7 @@ model-router/
 │   │   ├── openaiCompatible.ts  # Shared OpenAI-format logic + request/response converters
 │   │   ├── gemini.ts            # Google Gemini (native API)
 │   │   ├── cohere.ts            # Cohere Chat v2
-│   │   ├── github.ts, mistral.ts, cerebras.ts, groq.ts, nvidia.ts, cloudflare.ts, openrouter.ts, local.ts
+│   │   ├── mistral.ts, cerebras.ts, groq.ts, nvidia.ts, cloudflare.ts, openrouter.ts, local.ts
 │   ├── streaming/
 │   │   ├── anthropicSSE.ts    # Writes Anthropic SSE events
 │   │   ├── openaiSSE.ts       # Converts Anthropic SSE → OpenAI SSE chunks
@@ -121,7 +121,7 @@ Copy `.env.example` to `.env` and fill in keys for providers you want to use.
 
 Key settings:
 ```bash
-FALLBACK_ORDER=gemini,github,mistral,cerebras,groq,openrouter,nvidia,cloudflare,cohere,local
+FALLBACK_ORDER=gemini,mistral,cerebras,groq,openrouter,nvidia,cloudflare,cohere,local
 PORT=8787
 ```
 

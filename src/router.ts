@@ -2,7 +2,6 @@ import { cerebrasAdapter } from "./adapters/cerebras";
 import { cloudflareAdapter } from "./adapters/cloudflare";
 import { cohereAdapter } from "./adapters/cohere";
 import { geminiAdapter } from "./adapters/gemini";
-import { githubAdapter } from "./adapters/github";
 import { groqAdapter } from "./adapters/groq";
 import { localAdapter } from "./adapters/local";
 import { mistralAdapter } from "./adapters/mistral";
@@ -19,7 +18,6 @@ import { countTokens } from "./tokenizer";
 import type { NormalizedRequest, ProviderAdapter, ResolvedBy, TierName } from "./types";
 
 const adapters: Record<TierName, ProviderAdapter> = {
-  github: githubAdapter,
   cerebras: cerebrasAdapter,
   groq: groqAdapter,
   gemini: geminiAdapter,
@@ -32,7 +30,6 @@ const adapters: Record<TierName, ProviderAdapter> = {
 };
 
 const limitsByTier: Record<TierName, { rpm: number; tpm: number; rpd: number }> = {
-  github: config.github.limits,
   cerebras: config.cerebras.limits,
   groq: config.groq.limits,
   gemini: config.gemini.limits,
@@ -76,7 +73,6 @@ export function planTierOrder(
   if (estimatedInputTokens > 4000) {
     return [
       "gemini",
-      "github",
       "mistral",
       "cerebras",
       "openrouter",
@@ -194,8 +190,6 @@ function retryAfterFromError(err: unknown): number | undefined {
 
 function hasCredentials(tier: TierName): boolean {
   switch (tier) {
-    case "github":
-      return Boolean(config.github.token);
     case "cerebras":
       return Boolean(config.cerebras.apiKey);
     case "groq":

@@ -100,7 +100,7 @@ export const cohereAdapter: ProviderAdapter = {
   tier: "cohere",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    return estimatedTokens <= config.cohere.limits.tpm;
+    return estimatedTokens <= 128_000;
   },
 
   async send(req: NormalizedRequest) {

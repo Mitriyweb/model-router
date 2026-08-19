@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import {
   anthropicResponseToOpenAI,
+  anthropicToolsToOpenAI,
   openAIRequestToNormalized,
+  openAIResponseToAnthropic,
 } from "../src/adapters/openaiCompatible";
 import { AnthropicSSEWriter } from "../src/streaming/anthropicSSE";
 import { anthropicStreamToOpenAI } from "../src/streaming/openaiSSE";
@@ -44,6 +46,65 @@ describe("OpenAI compatibility and streaming", () => {
     expect(openAIJson.choices[0].message.content).toBe("Hello from model!");
     expect(openAIJson.choices[0].finish_reason).toBe("stop");
     expect(openAIJson.usage.total_tokens).toBe(20);
+  });
+
+  it("keeps Groq reasoning-only responses usable", () => {
+    const groqResponse = {
+      id: "chatcmpl-groq-reasoning",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: "",
+            reasoning: "The user says 'ping'. This is a short acknowledgment response.",
+          },
+          finish_reason: "length",
+        },
+      ],
+      usage: {
+        prompt_tokens: 72,
+        completion_tokens: 16,
+      },
+    };
+
+    const result = openAIResponseToAnthropic(groqResponse, "openai/gpt-oss-120b");
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0]).toMatchObject({
+      type: "text",
+      text: "The user says 'ping'. This is a short acknowledgment response.",
+    });
+    expect(result.stop_reason).toBe("max_tokens");
+  });
+
+  it("sanitizes unsupported tool schema features before OpenAI-compatible calls", () => {
+    const tools = [
+      {
+        name: "Artifact",
+        description: "Artifact tool",
+        input_schema: {
+          type: "object",
+          properties: {
+            after: {
+              type: "string",
+              pattern: "^[A-Za-z0-9_=-]{1,4096}$",
+            },
+          },
+          required: ["after"],
+        },
+      },
+    ];
+
+    const openAITools = anthropicToolsToOpenAI(tools as any);
+    expect(openAITools[0].function.parameters).toEqual({
+      type: "object",
+      properties: {
+        after: {
+          type: "string",
+        },
+      },
+      required: ["after"],
+    });
   });
 
   it("converts Anthropic SSE stream to OpenAI SSE chunks", async () => {

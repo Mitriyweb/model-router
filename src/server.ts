@@ -75,7 +75,6 @@ function parseModelTierOverride(modelName?: string): { tier?: TierName; cleanMod
   if (!modelName) return { cleanModel: "model-router-auto" };
 
   const validTiers: TierName[] = [
-    "github",
     "cerebras",
     "groq",
     "gemini",
@@ -148,8 +147,6 @@ async function handleChatCompletions(request: Request): Promise<Response> {
 function handleModels(): Response {
   const models = [
     { id: "model-router-auto", object: "model", created: 1700000000, owned_by: "model-router" },
-    { id: "gpt-4o", object: "model", created: 1700000000, owned_by: "github" },
-    { id: "claude-3-5-sonnet", object: "model", created: 1700000000, owned_by: "github" },
     { id: "llama-3.3-70b", object: "model", created: 1700000000, owned_by: "cerebras" },
     { id: "llama-3.3-70b-versatile", object: "model", created: 1700000000, owned_by: "groq" },
     { id: "gemini-3.7-flash", object: "model", created: 1700000000, owned_by: "gemini" },
@@ -163,7 +160,6 @@ function handleModels(): Response {
 
 function handleStatus(): Response {
   const tiers = [
-    "github",
     "cerebras",
     "groq",
     "gemini",
