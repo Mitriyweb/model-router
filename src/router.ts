@@ -167,11 +167,29 @@ export async function routeRequest(
       return { tierUsed: tier, response, attempts, policyApplied: rule?.name };
     } catch (err: any) {
       console.warn(`[router] fail ${tier}: ${err.message ?? String(err)}`);
+      const retryAfterMs = retryAfterFromError(err);
+      if (retryAfterMs !== undefined) {
+        rateLimiter.markUnavailable(tier, retryAfterMs);
+      }
       attempts.push({ tier, error: err.message ?? String(err) });
     }
   }
 
   throw new Error(`All tiers exhausted or unavailable: ${JSON.stringify(attempts, null, 2)}`);
+}
+
+function retryAfterFromError(err: unknown): number | undefined {
+  const message = err instanceof Error ? err.message : String(err);
+  if (!/quota exceeded|rate limit|too many requests/i.test(message)) return undefined;
+
+  const match = message.match(/retry in\s+([\d.]+)\s*(ms|s|m)?/i);
+  if (!match) return 60_000;
+
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return 60_000;
+  const unit = match[2]?.toLowerCase();
+  const multiplier = unit === "ms" ? 1 : unit === "m" ? 60_000 : 1_000;
+  return Math.max(1_000, Math.ceil(amount * multiplier));
 }
 
 function hasCredentials(tier: TierName): boolean {

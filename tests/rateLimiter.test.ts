@@ -31,4 +31,15 @@ describe("rateLimiter", () => {
     // 30 tokens used + 30 requested > 50 TPM limit
     expect(rateLimiter.canServe("gemini", limits, 30)).toBe(false);
   });
+
+  it("temporarily skips a provider marked unavailable after a quota error", () => {
+    rateLimiter.reset();
+    const limits = { rpm: 10, tpm: 100, rpd: 100 };
+
+    rateLimiter.markUnavailable("gemini", 60_000);
+    expect(rateLimiter.canServe("gemini", limits, 10)).toBe(false);
+
+    rateLimiter.reset();
+    expect(rateLimiter.canServe("gemini", limits, 10)).toBe(true);
+  });
 });

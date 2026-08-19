@@ -15,6 +15,7 @@ type PersistedState = Record<TierName, Usage>;
 
 export class RateLimiter {
   private usage = new Map<TierName, Usage>();
+  private unavailableUntil = new Map<TierName, number>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private loaded: Promise<void>;
 
@@ -64,6 +65,8 @@ export class RateLimiter {
 
   canServe(tier: TierName, limits: TierLimits, estimatedTokens: number): boolean {
     const now = Date.now();
+    if ((this.unavailableUntil.get(tier) ?? 0) > now) return false;
+
     const usage = this.getUsage(tier);
     this.prune(usage, now);
 
@@ -85,6 +88,10 @@ export class RateLimiter {
     this.scheduleSave();
   }
 
+  markUnavailable(tier: TierName, durationMs: number) {
+    this.unavailableUntil.set(tier, Date.now() + durationMs);
+  }
+
   ready() {
     return this.loaded;
   }
@@ -104,6 +111,7 @@ export class RateLimiter {
 
   reset() {
     this.usage.clear();
+    this.unavailableUntil.clear();
   }
 }
 
