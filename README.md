@@ -37,6 +37,14 @@ Install `model-router` binary with one command:
 curl -fsSL https://raw.githubusercontent.com/Mitriyweb/model-router/main/install.sh | bash
 ```
 
+To create a `.env` file with default configuration, run:
+
+```bash
+model-router --init-env
+```
+
+This will create a `.env` file in your home directory with the default configuration values.
+
 Or run via Bun:
 
 ```bash
