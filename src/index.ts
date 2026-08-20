@@ -66,7 +66,7 @@ Environment Variables:
 }
 
 if (args.includes("--version") || args.includes("-v")) {
-  console.log("model-router v0.1.5");
+  console.log(`model-router v${require("./package.json").version}`);
   process.exit(0);
 }
 
