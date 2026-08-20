@@ -176,7 +176,11 @@ export async function routeRequest(
 
 function retryAfterFromError(err: unknown): number | undefined {
   const message = err instanceof Error ? err.message : String(err);
-  if (!/quota exceeded|rate limit|too many requests/i.test(message)) return undefined;
+  const isRateLimitSignal =
+    /quota exceeded|rate limit|too many requests|rate_limit_exceeded|tokens per minute|tpm.*limit|limit .* requested .* try again/i.test(
+      message,
+    );
+  if (!isRateLimitSignal) return undefined;
 
   const match = message.match(/retry in\s+([\d.]+)\s*(ms|s|m)?/i);
   if (!match) return 60_000;

@@ -76,11 +76,15 @@ export class RateLimiter {
 
   canServe(tier: TierName, limits: TierLimits, estimatedTokens: number): boolean {
     const now = Date.now();
-    if ((this.unavailableUntil.get(tier) ?? 0) > now) {
+    const unavailableUntil = this.unavailableUntil.get(tier) ?? 0;
+    if (unavailableUntil > now) {
       console.warn(
-        `[rateLimiter] ${tier} unavailable until ${new Date(this.unavailableUntil.get(tier) ?? now).toISOString()}`,
+        `[rateLimiter] ${tier} unavailable until ${new Date(unavailableUntil).toISOString()}`,
       );
       return false;
+    }
+    if (unavailableUntil > 0) {
+      this.unavailableUntil.delete(tier);
     }
 
     const usage = this.getUsage(tier);
@@ -111,6 +115,13 @@ export class RateLimiter {
 
   markUnavailable(tier: TierName, durationMs: number) {
     this.unavailableUntil.set(tier, Date.now() + durationMs);
+  }
+
+  private removeExpiredCooldown(tier: TierName): void {
+    const unavailableUntil = this.unavailableUntil.get(tier);
+    if (unavailableUntil && unavailableUntil <= Date.now()) {
+      this.unavailableUntil.delete(tier);
+    }
   }
 
   ready() {

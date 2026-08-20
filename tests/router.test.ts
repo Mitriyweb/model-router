@@ -5,7 +5,8 @@ import { groqAdapter } from "../src/adapters/groq";
 import { readProviderError } from "../src/adapters/openaiCompatible";
 import { config } from "../src/config";
 import { POLICIES } from "../src/policies";
-import { estimateTokens, planTierOrder } from "../src/router";
+import { rateLimiter } from "../src/rateLimiter";
+import { estimateTokens, planTierOrder, routeRequest } from "../src/router";
 import { startServer } from "../src/server";
 import type { NormalizedRequest } from "../src/types";
 
@@ -114,6 +115,59 @@ describe("router", () => {
       expect(cerebrasAdapter.canHandle(req, 5000)).toBe(true);
     } finally {
       config.cerebras.limits.tpm = previousTpm;
+    }
+  });
+
+  it("marks Groq unavailable when upstream reports a TPM rate-limit error", async () => {
+    const req: NormalizedRequest = {
+      systemPrompt: "Please use the tools for the task.",
+      messages: [{ role: "user", content: "Summarize this request in detail." }],
+      tools: [],
+      stream: false,
+    };
+
+    const originalFetch = globalThis.fetch;
+    const originalApiKey = config.groq.apiKey;
+    const originalBaseUrl = config.groq.baseUrl;
+    const originalFallback = [...config.fallbackOrder];
+    const originalHasCustom = config.hasCustomFallbackOrder;
+
+    rateLimiter.reset();
+    config.groq.apiKey = "test-key";
+    config.groq.baseUrl = "https://example.invalid";
+    config.fallbackOrder = ["groq"];
+    config.hasCustomFallbackOrder = false;
+
+    const fetchMock = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              message:
+                "Request too large for model `openai/gpt-oss-120b` ... Limit 8000, Requested 76706, please reduce your message size and try again.",
+              type: "tokens",
+              code: "rate_limit_exceeded",
+            },
+          }),
+          {
+            status: 413,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+    );
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      await expect(routeRequest(req)).rejects.toThrow("All tiers exhausted or unavailable");
+      expect(rateLimiter.canServe("groq", config.groq.limits, 1000)).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+      config.groq.apiKey = originalApiKey;
+      config.groq.baseUrl = originalBaseUrl;
+      config.fallbackOrder = originalFallback;
+      config.hasCustomFallbackOrder = originalHasCustom;
+      rateLimiter.reset();
     }
   });
 

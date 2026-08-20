@@ -43,6 +43,14 @@ describe("rateLimiter", () => {
     expect(rateLimiter.canServe("gemini", limits, 10)).toBe(true);
   });
 
+  it("allows a provider again after its cooldown expires", () => {
+    rateLimiter.reset();
+    const limits = { rpm: 10, tpm: 100, rpd: 100 };
+
+    rateLimiter.markUnavailable("groq", 0);
+    expect(rateLimiter.canServe("groq", limits, 10)).toBe(true);
+  });
+
   it("logs the limiter snapshot when a provider is skipped for rate limits", () => {
     rateLimiter.reset();
     const warn = console.warn;
