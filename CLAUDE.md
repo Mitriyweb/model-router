@@ -1,6 +1,6 @@
 # model-router
 
-Universal AI proxy that routes Claude Code, ZeroClaw, Aider, Cline, and any OpenAI-compatible client through **9 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
+Universal AI proxy that routes Claude Code, Agent Team, ZeroClaw, Aider, Cline, and any OpenAI-compatible client through **9 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
 
 ## Key Features
 
@@ -92,11 +92,13 @@ bun run build:all
 
 ## Connect Clients
 
-### Claude Code (Anthropic API)
+### Claude Code & Agent Team (Anthropic API)
 ```bash
 ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude
-# Or use the alias:
-claude-free
+# Or for Agent Team:
+export ANTHROPIC_BASE_URL=http://localhost:8787
+export ANTHROPIC_API_KEY=dummy
+agent-team run --all
 ```
 
 ### ZeroClaw / Aider / Cline / Cursor (OpenAI API)
@@ -109,7 +111,7 @@ export OPENAI_API_KEY="dummy"
 
 | Endpoint | Format | Used by |
 |---|---|---|
-| `POST /v1/messages` | Anthropic | Claude Code, Anthropic SDK |
+| `POST /v1/messages` | Anthropic | Claude Code, Agent Team, Anthropic SDK |
 | `POST /v1/chat/completions` | OpenAI | ZeroClaw, Aider, Cline, LangChain |
 | `GET /v1/models` | OpenAI | Any OpenAI client |
 | `GET /status` | JSON | Monitoring (RPM/TPM/RPD per provider) |

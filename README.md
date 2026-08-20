@@ -1,6 +1,6 @@
 # model-router
 
-Universal AI proxy that allows **Claude Code**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, and custom Chat UIs to run on **9 free-tier and local LLM providers** instead of expensive paid APIs.
+Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, and custom Chat UIs to run on **9 free-tier and local LLM providers** instead of expensive paid APIs.
 
 ## Supported Providers
 
@@ -22,7 +22,7 @@ Universal AI proxy that allows **Claude Code**, **ZeroClaw**, **Aider**, **Cline
 
 `model-router` simultaneously exposes two standard APIs on port `8787`:
 
-1. **Anthropic API** (`POST /v1/messages`): For Claude Code and Anthropic clients.
+1. **Anthropic API** (`POST /v1/messages`): For Claude Code, Agent Team, and Anthropic clients.
 2. **OpenAI API** (`POST /v1/chat/completions` & `GET /v1/models`): For ZeroClaw, Aider, Cline, Roo Code, Cursor, Continue.dev, and Web Chat interfaces.
 
 ---
@@ -72,7 +72,19 @@ ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude
 
 ---
 
-### 2. ZeroClaw & Claw Analogs
+### 2. Agent Team
+
+[Agent Team](https://github.com/Mitriyweb/agent-team) connects via the Anthropic API:
+
+```bash
+export ANTHROPIC_BASE_URL="http://localhost:8787"
+export ANTHROPIC_API_KEY="dummy"
+agent-team run --all
+```
+
+---
+
+### 3. ZeroClaw & Claw Analogs
 
 ZeroClaw connects directly via the OpenAI Chat Completions endpoint:
 
@@ -84,7 +96,7 @@ zeroclaw --model model-router-auto
 
 ---
 
-### 3. Aider
+### 4. Aider
 
 ```bash
 export OPENAI_API_BASE="http://localhost:8787/v1"
@@ -94,7 +106,7 @@ aider --model openai/model-router-auto
 
 ---
 
-### 4. Cline / Roo Code / Continue.dev / Cursor
+### 5. Cline / Roo Code / Continue.dev / Cursor
 
 - **Provider**: `OpenAI Compatible`
 - **Base URL**: `http://localhost:8787/v1`
