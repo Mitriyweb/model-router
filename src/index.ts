@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { version } from "../package.json";
 import { config } from "./config";
 import { startServer } from "./server";
 
@@ -52,20 +53,12 @@ Environment Variables:
   LOCAL_BASE_URL        Base URL for local OpenAI-compatible endpoint (default: http://localhost:11434/v1)
   FALLBACK_ORDER        Comma-separated tier preference (default: groq,gemini,openrouter,local)
   PORT                  Port to listen on (default: 8787)
-
-Environment Variables:
-  GROQ_API_KEY          API key for Groq
-  GEMINI_API_KEY        API key for Google Gemini
-  OPENROUTER_API_KEY    API key for OpenRouter
-  LOCAL_BASE_URL        Base URL for local OpenAI-compatible endpoint (default: http://localhost:11434/v1)
-  FALLBACK_ORDER        Comma-separated tier preference (default: groq,gemini,openrouter,local)
-  PORT                  Port to listen on (default: 8787)
 `);
   process.exit(0);
 }
 
 if (args.includes("--version") || args.includes("-v")) {
-  console.log(`model-router v${require("./package.json").version}`);
+  console.log(`model-router v${version}`);
   process.exit(0);
 }
 

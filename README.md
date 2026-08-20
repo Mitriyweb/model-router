@@ -237,7 +237,7 @@ bun run build:all
 
 ## Build Process
 
-The build process embeds the version information from package.json into the code before compiling the standalone executable. This ensures that the version information is available at runtime.
+The standalone executable bundles the version information directly from `package.json` during compilation, making it available at runtime without extra build scripts.
 
 ## License
 
