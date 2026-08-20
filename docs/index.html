@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>model-router — Universal Free LLM Proxy</title>
-  <meta name="description" content="Universal AI proxy. Run Claude Code, ZeroClaw, Aider, and Cline on 9 free-tier LLM providers — Mistral, Groq, Gemini, Cerebras, OpenRouter, and more." />
+  <meta name="description" content="Universal AI proxy. Run Claude Code, Agent Team, ZeroClaw, Aider, and Cline on 9 free-tier LLM providers — Mistral, Groq, Gemini, Cerebras, OpenRouter, and more." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -226,7 +226,7 @@
 <div class="hero">
   <div class="badge">Open Source · Free Tier · 9 Providers</div>
   <h1>Universal <span class="grad">Free LLM</span> Proxy</h1>
-  <p>Run Claude Code, ZeroClaw, Aider, and Cline on <strong>9 free-tier providers</strong> instead of paying for the Claude API.</p>
+  <p>Run Claude Code, Agent Team, ZeroClaw, Aider, and Cline on <strong>9 free-tier providers</strong> instead of paying for the Claude API.</p>
   <div class="hero-actions">
     <a class="btn-primary" href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">View on GitHub</a>
     <a class="btn-secondary" href="#claude-code">Claude Code Setup</a>
@@ -331,7 +331,7 @@
   <p class="section-sub">One proxy, two API formats, nine providers — automatic fallback and rate limiting built-in.</p>
   <div class="arch">
 <pre>
-  <span class="hi">Claude Code</span>                    <span class="hi">ZeroClaw / Aider / Cline</span>
+  <span class="hi">Claude Code / Agent Team</span>       <span class="hi">ZeroClaw / Aider / Cline</span>
   (Anthropic API)                 (OpenAI API)
         │                               │
         │ POST /v1/messages             │ POST /v1/chat/completions
@@ -433,6 +433,14 @@
         <span class="kw">export</span> <span class="val">ANTHROPIC_BASE_URL</span>=http://localhost:8787<br>
         <span class="kw">export</span> <span class="val">ANTHROPIC_API_KEY</span>=dummy<br>
         <span class="cmd2">claude</span>
+      </div>
+    </div>
+    <div class="client-card">
+      <div class="client-title"><span class="client-icon">👥</span> Agent Team</div>
+      <div class="code-block">
+        <span class="kw">export</span> <span class="val">ANTHROPIC_BASE_URL</span>=http://localhost:8787<br>
+        <span class="kw">export</span> <span class="val">ANTHROPIC_API_KEY</span>=dummy<br>
+        <span class="cmd2">agent-team</span> run --all
       </div>
     </div>
     <div class="client-card">
