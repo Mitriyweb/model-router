@@ -11,7 +11,10 @@ export const mistralAdapter: ProviderAdapter = {
   tier: "mistral",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    return fitsOpenAICompatibleContext(estimatedTokens);
+    if (config.mistral.limits.tpm > 0 && estimatedTokens > config.mistral.limits.tpm) {
+      return false;
+    }
+    return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
   async send(req: NormalizedRequest) {

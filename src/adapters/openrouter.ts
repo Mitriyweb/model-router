@@ -1,6 +1,7 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
+  ProviderError,
   buildOpenAIPayload,
   createOpenAICompatibleStream,
   fitsOpenAICompatibleContext,
@@ -12,7 +13,10 @@ export const openrouterAdapter: ProviderAdapter = {
   tier: "openrouter",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    return fitsOpenAICompatibleContext(estimatedTokens);
+    if (config.openrouter.limits.tpm > 0 && estimatedTokens > config.openrouter.limits.tpm) {
+      return false;
+    }
+    return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
   async send(req: NormalizedRequest) {
@@ -30,7 +34,8 @@ export const openrouterAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(await readProviderError(res, "OpenRouter", config.openrouter.model));
+      const msg = await readProviderError(res, "OpenRouter", config.openrouter.model);
+      throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
