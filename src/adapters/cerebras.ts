@@ -11,7 +11,10 @@ export const cerebrasAdapter: ProviderAdapter = {
   tier: "cerebras",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    return fitsOpenAICompatibleContext(estimatedTokens);
+    if (config.cerebras.limits.tpm > 0 && estimatedTokens > config.cerebras.limits.tpm) {
+      return false;
+    }
+    return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
   async send(req: NormalizedRequest) {

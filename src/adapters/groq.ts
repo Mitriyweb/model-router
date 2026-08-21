@@ -12,6 +12,9 @@ export const groqAdapter: ProviderAdapter = {
   tier: "groq",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
+    if (config.groq.limits.tpm > 0 && estimatedTokens > config.groq.limits.tpm) {
+      return false;
+    }
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 

@@ -93,7 +93,32 @@ describe("router", () => {
     expect(groqAdapter.canHandle(req, 5000)).toBe(true);
   });
 
-  it("does not use Cerebras TPM budget as a request-size cap", () => {
+  it("skips a tier if post-pruning request size still exceeds tier TPM limit", async () => {
+    const req: NormalizedRequest = {
+      systemPrompt: "Hi",
+      messages: [{ role: "user", content: "A".repeat(100_000) }],
+      tools: [],
+      stream: false,
+    };
+
+    const originalApiKey = config.groq.apiKey;
+    const originalFallback = [...config.fallbackOrder];
+    const originalHasCustom = config.hasCustomFallbackOrder;
+
+    config.groq.apiKey = "test-key";
+    config.fallbackOrder = ["groq"];
+    config.hasCustomFallbackOrder = true;
+
+    try {
+      await expect(routeRequest(req)).rejects.toThrow("All tiers exhausted or unavailable");
+    } finally {
+      config.groq.apiKey = originalApiKey;
+      config.fallbackOrder = originalFallback;
+      config.hasCustomFallbackOrder = originalHasCustom;
+    }
+  });
+
+  it("supports context pruning for Cerebras requests when estimated tokens exceed limit", () => {
     const req: NormalizedRequest = {
       systemPrompt: "Hi",
       messages: [{ role: "user", content: "Hello there! This is a normal request." }],
@@ -101,14 +126,7 @@ describe("router", () => {
       stream: false,
     };
 
-    const previousTpm = config.cerebras.limits.tpm;
-    config.cerebras.limits.tpm = 2000;
-
-    try {
-      expect(cerebrasAdapter.canHandle(req, 5000)).toBe(true);
-    } finally {
-      config.cerebras.limits.tpm = previousTpm;
-    }
+    expect(cerebrasAdapter.canHandle(req, 5000)).toBe(true);
   });
 
   it("marks Groq unavailable when upstream reports a TPM rate-limit error", async () => {

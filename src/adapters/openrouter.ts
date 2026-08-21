@@ -13,6 +13,9 @@ export const openrouterAdapter: ProviderAdapter = {
   tier: "openrouter",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
+    if (config.openrouter.limits.tpm > 0 && estimatedTokens > config.openrouter.limits.tpm) {
+      return false;
+    }
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
