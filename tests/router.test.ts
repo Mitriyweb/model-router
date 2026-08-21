@@ -96,7 +96,7 @@ describe("router", () => {
   it("skips a tier if post-pruning request size still exceeds tier TPM limit", async () => {
     const req: NormalizedRequest = {
       systemPrompt: "Hi",
-      messages: [{ role: "user", content: "A".repeat(100_000) }],
+      messages: [{ role: "user", content: "Hello there! ".repeat(50) }],
       tools: [],
       stream: false,
     };
@@ -104,8 +104,10 @@ describe("router", () => {
     const originalApiKey = config.groq.apiKey;
     const originalFallback = [...config.fallbackOrder];
     const originalHasCustom = config.hasCustomFallbackOrder;
+    const originalTpm = config.groq.limits.tpm;
 
     config.groq.apiKey = "test-key";
+    config.groq.limits.tpm = 50;
     config.fallbackOrder = ["groq"];
     config.hasCustomFallbackOrder = true;
 
@@ -113,6 +115,7 @@ describe("router", () => {
       await expect(routeRequest(req)).rejects.toThrow("All tiers exhausted or unavailable");
     } finally {
       config.groq.apiKey = originalApiKey;
+      config.groq.limits.tpm = originalTpm;
       config.fallbackOrder = originalFallback;
       config.hasCustomFallbackOrder = originalHasCustom;
     }
