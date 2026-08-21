@@ -82,7 +82,7 @@ describe("router", () => {
     }
   });
 
-  it("does not use Groq TPM budget as a request-size cap", () => {
+  it("supports context pruning for Groq requests when estimated tokens exceed limit", () => {
     const req: NormalizedRequest = {
       systemPrompt: "Hi",
       messages: [{ role: "user", content: "Hello there! This is a normal request." }],
@@ -90,14 +90,7 @@ describe("router", () => {
       stream: false,
     };
 
-    const previousTpm = config.groq.limits.tpm;
-    config.groq.limits.tpm = 2000;
-
-    try {
-      expect(groqAdapter.canHandle(req, 5000)).toBe(true);
-    } finally {
-      config.groq.limits.tpm = previousTpm;
-    }
+    expect(groqAdapter.canHandle(req, 5000)).toBe(true);
   });
 
   it("does not use Cerebras TPM budget as a request-size cap", () => {

@@ -10,6 +10,7 @@ import { openrouterAdapter } from "./adapters/openrouter";
 import { cacheKey, setCached } from "./cache";
 import { config } from "./config";
 import { POLICIES } from "./policies";
+import { pruneNormalizedRequest } from "./pruner";
 import { rateLimiter } from "./rateLimiter";
 import { resolvers } from "./resolvers";
 import { AnthropicSSEWriter } from "./streaming/anthropicSSE";
@@ -66,12 +67,12 @@ export function planTierOrder(
 ): TierName[] {
   if (opts?.forcePrivate) return ["local"];
 
-  if (config.hasCustomFallbackOrder) {
-    return [...config.fallbackOrder];
-  }
+  let baseOrder: TierName[];
 
-  if (estimatedInputTokens > 4000) {
-    return [
+  if (config.hasCustomFallbackOrder) {
+    baseOrder = [...config.fallbackOrder];
+  } else if (estimatedInputTokens > 4000) {
+    baseOrder = [
       "gemini",
       "mistral",
       "cerebras",
@@ -82,9 +83,11 @@ export function planTierOrder(
       "cohere",
       "local",
     ];
+  } else {
+    baseOrder = [...config.fallbackOrder];
   }
 
-  return [...config.fallbackOrder];
+  return baseOrder;
 }
 
 export interface RouteResult {
@@ -141,12 +144,19 @@ export async function routeRequest(
       attempts.push({ tier, skipped: "no API key/token configured" });
       continue;
     }
-    if (!adapter.canHandle(req, estimated)) {
+    let effectiveReq = req;
+    let effectiveTokens = estimated;
+    if (limits.tpm > 0 && estimated > limits.tpm) {
+      effectiveReq = pruneNormalizedRequest(req, limits.tpm);
+      effectiveTokens = estimateTokens(effectiveReq);
+    }
+
+    if (!adapter.canHandle(effectiveReq, effectiveTokens)) {
       console.warn(`[router] skip ${tier}: request doesn't fit this tier (context/size)`);
       attempts.push({ tier, skipped: "request doesn't fit this tier (context/size)" });
       continue;
     }
-    if (!rateLimiter.canServe(tier, limits, estimated)) {
+    if (!rateLimiter.canServe(tier, limits, effectiveTokens)) {
       console.warn(`[router] skip ${tier}: rate limit reached`);
       attempts.push({ tier, skipped: "rate limit reached" });
       continue;
@@ -154,7 +164,12 @@ export async function routeRequest(
 
     try {
       console.log(`[router] trying ${tier}...`);
-      const response = await adapter.send(req);
+      if (effectiveTokens < estimated) {
+        console.log(
+          `[router] pruned request for ${tier} from ${estimated} to ${effectiveTokens} tokens`,
+        );
+      }
+      const response = await adapter.send(effectiveReq);
       const totalTokens = response.usage.input_tokens + response.usage.output_tokens || estimated;
       rateLimiter.record(tier, totalTokens);
       const key = await cacheKey(req);
@@ -174,7 +189,63 @@ export async function routeRequest(
   throw new Error(`All tiers exhausted or unavailable: ${JSON.stringify(attempts, null, 2)}`);
 }
 
-function retryAfterFromError(err: unknown): number | undefined {
+export function retryAfterFromHeaders(headers?: Headers): number | undefined {
+  if (!headers) return undefined;
+
+  const retryAfter = headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number.parseFloat(retryAfter);
+    if (Number.isFinite(seconds)) {
+      return Math.max(1_000, Math.ceil(seconds * 1_000));
+    }
+  }
+
+  for (const name of [
+    "x-ratelimit-reset-tokens",
+    "x-ratelimit-reset-requests",
+    "x-ratelimit-reset",
+  ]) {
+    const val = headers.get(name)?.trim();
+    if (val) {
+      if (val.endsWith("ms")) {
+        const ms = Number.parseFloat(val.slice(0, -2));
+        if (Number.isFinite(ms)) return Math.max(1_000, Math.ceil(ms));
+      } else if (val.endsWith("s")) {
+        const s = Number.parseFloat(val.slice(0, -1));
+        if (Number.isFinite(s)) return Math.max(1_000, Math.ceil(s * 1_000));
+      } else if (val.endsWith("m")) {
+        const m = Number.parseFloat(val.slice(0, -1));
+        if (Number.isFinite(m)) return Math.max(1_000, Math.ceil(m * 60_000));
+      }
+      const num = Number.parseFloat(val);
+      if (Number.isFinite(num)) {
+        if (num > 1e9) {
+          const now = Date.now();
+          const target = num < 1e11 ? num * 1_000 : num;
+          return Math.max(1_000, Math.ceil(target - now));
+        }
+        return Math.max(1_000, Math.ceil(num * 1_000));
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export function retryAfterFromError(err: unknown): number | undefined {
+  if (err && typeof err === "object" && "headers" in err && (err as any).headers) {
+    const headerRetry = retryAfterFromHeaders((err as any).headers);
+    if (headerRetry !== undefined) return headerRetry;
+  }
+  if (
+    err &&
+    typeof err === "object" &&
+    "retryAfterMs" in err &&
+    typeof (err as any).retryAfterMs === "number"
+  ) {
+    return (err as any).retryAfterMs;
+  }
+
   const message = err instanceof Error ? err.message : String(err);
   const isRateLimitSignal =
     /quota exceeded|rate limit|too many requests|rate_limit_exceeded|tokens per minute|tpm.*limit|limit .* requested .* try again/i.test(
@@ -259,12 +330,25 @@ export async function routeRequestStream(
     const limits = limitsByTier[tier];
     if (!hasCredentials(tier)) continue;
     if (!adapter.sendStream) continue;
-    if (!adapter.canHandle(req, estimated)) continue;
-    if (!rateLimiter.canServe(tier, limits, estimated)) continue;
+    let effectiveReq = req;
+    let effectiveTokens = estimated;
+    if (limits.tpm > 0 && estimated > limits.tpm) {
+      effectiveReq = pruneNormalizedRequest(req, limits.tpm);
+      effectiveTokens = estimateTokens(effectiveReq);
+    }
 
-    rateLimiter.record(tier, estimated);
+    if (!adapter.canHandle(effectiveReq, effectiveTokens)) continue;
+    if (!rateLimiter.canServe(tier, limits, effectiveTokens)) continue;
 
-    const rawStream = adapter.sendStream(req);
+    rateLimiter.record(tier, effectiveTokens);
+
+    if (effectiveTokens < estimated) {
+      console.log(
+        `[router] pruned stream request for ${tier} from ${estimated} to ${effectiveTokens} tokens`,
+      );
+    }
+
+    const rawStream = adapter.sendStream(effectiveReq);
     const stream = reconstructingStream(rawStream, async (response) => {
       const key = await cacheKey(req);
       setCached(key, response);

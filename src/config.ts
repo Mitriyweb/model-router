@@ -5,6 +5,7 @@ export interface Config {
   fallbackOrder: TierName[];
   hasCustomFallbackOrder: boolean;
   cacheDisabled: boolean;
+  routerMaxContextTokens: number;
   groq: {
     apiKey: string;
     baseUrl: string;
@@ -96,6 +97,7 @@ export const config: Config = {
   fallbackOrder: parseFallbackOrder(process.env.FALLBACK_ORDER),
   hasCustomFallbackOrder: Boolean(process.env.FALLBACK_ORDER?.trim()),
   cacheDisabled: parseBoolean(process.env.ROUTER_DISABLE_CACHE),
+  routerMaxContextTokens: Number(process.env.ROUTER_MAX_CONTEXT_TOKENS ?? 128_000),
   groq: {
     apiKey: process.env.GROQ_API_KEY ?? "",
     baseUrl: process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1",
