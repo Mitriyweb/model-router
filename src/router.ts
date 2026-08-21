@@ -66,12 +66,12 @@ export function planTierOrder(
 ): TierName[] {
   if (opts?.forcePrivate) return ["local"];
 
-  if (config.hasCustomFallbackOrder) {
-    return [...config.fallbackOrder];
-  }
+  let baseOrder: TierName[];
 
-  if (estimatedInputTokens > 4000) {
-    return [
+  if (config.hasCustomFallbackOrder) {
+    baseOrder = [...config.fallbackOrder];
+  } else if (estimatedInputTokens > 4000) {
+    baseOrder = [
       "gemini",
       "mistral",
       "cerebras",
@@ -82,9 +82,18 @@ export function planTierOrder(
       "cohere",
       "local",
     ];
+  } else {
+    baseOrder = [...config.fallbackOrder];
   }
 
-  return [...config.fallbackOrder];
+  // Filter out tiers whose total 1-minute token budget (TPM) is smaller than the request size itself
+  return baseOrder.filter((tier) => {
+    const limits = limitsByTier[tier];
+    if (limits && limits.tpm > 0 && estimatedInputTokens > limits.tpm) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export interface RouteResult {
@@ -174,7 +183,63 @@ export async function routeRequest(
   throw new Error(`All tiers exhausted or unavailable: ${JSON.stringify(attempts, null, 2)}`);
 }
 
-function retryAfterFromError(err: unknown): number | undefined {
+export function retryAfterFromHeaders(headers?: Headers): number | undefined {
+  if (!headers) return undefined;
+
+  const retryAfter = headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number.parseFloat(retryAfter);
+    if (Number.isFinite(seconds)) {
+      return Math.max(1_000, Math.ceil(seconds * 1_000));
+    }
+  }
+
+  for (const name of [
+    "x-ratelimit-reset-tokens",
+    "x-ratelimit-reset-requests",
+    "x-ratelimit-reset",
+  ]) {
+    const val = headers.get(name)?.trim();
+    if (val) {
+      if (val.endsWith("ms")) {
+        const ms = Number.parseFloat(val.slice(0, -2));
+        if (Number.isFinite(ms)) return Math.max(1_000, Math.ceil(ms));
+      } else if (val.endsWith("s")) {
+        const s = Number.parseFloat(val.slice(0, -1));
+        if (Number.isFinite(s)) return Math.max(1_000, Math.ceil(s * 1_000));
+      } else if (val.endsWith("m")) {
+        const m = Number.parseFloat(val.slice(0, -1));
+        if (Number.isFinite(m)) return Math.max(1_000, Math.ceil(m * 60_000));
+      }
+      const num = Number.parseFloat(val);
+      if (Number.isFinite(num)) {
+        if (num > 1e9) {
+          const now = Date.now();
+          const target = num < 1e11 ? num * 1_000 : num;
+          return Math.max(1_000, Math.ceil(target - now));
+        }
+        return Math.max(1_000, Math.ceil(num * 1_000));
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export function retryAfterFromError(err: unknown): number | undefined {
+  if (err && typeof err === "object" && "headers" in err && (err as any).headers) {
+    const headerRetry = retryAfterFromHeaders((err as any).headers);
+    if (headerRetry !== undefined) return headerRetry;
+  }
+  if (
+    err &&
+    typeof err === "object" &&
+    "retryAfterMs" in err &&
+    typeof (err as any).retryAfterMs === "number"
+  ) {
+    return (err as any).retryAfterMs;
+  }
+
   const message = err instanceof Error ? err.message : String(err);
   const isRateLimitSignal =
     /quota exceeded|rate limit|too many requests|rate_limit_exceeded|tokens per minute|tpm.*limit|limit .* requested .* try again/i.test(

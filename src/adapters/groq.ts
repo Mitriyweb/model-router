@@ -11,6 +11,9 @@ export const groqAdapter: ProviderAdapter = {
   tier: "groq",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
+    if (estimatedTokens > config.groq.limits.tpm) {
+      return false;
+    }
     return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
@@ -29,7 +32,8 @@ export const groqAdapter: ProviderAdapter = {
     if (!res.ok) {
       const raw = await res.text();
       console.warn("[groq] upstream error body:", raw);
-      throw new Error(`Groq error ${res.status}: ${raw}`);
+      const { ProviderError } = await import("./openaiCompatible");
+      throw new ProviderError(`Groq error ${res.status}: ${raw}`, res.status, res.headers);
     }
 
     const data = await res.json();

@@ -82,7 +82,7 @@ describe("router", () => {
     }
   });
 
-  it("does not use Groq TPM budget as a request-size cap", () => {
+  it("bypasses Groq when estimated tokens exceed Groq TPM limit", () => {
     const req: NormalizedRequest = {
       systemPrompt: "Hi",
       messages: [{ role: "user", content: "Hello there! This is a normal request." }],
@@ -94,7 +94,8 @@ describe("router", () => {
     config.groq.limits.tpm = 2000;
 
     try {
-      expect(groqAdapter.canHandle(req, 5000)).toBe(true);
+      expect(groqAdapter.canHandle(req, 5000)).toBe(false);
+      expect(groqAdapter.canHandle(req, 1000)).toBe(true);
     } finally {
       config.groq.limits.tpm = previousTpm;
     }

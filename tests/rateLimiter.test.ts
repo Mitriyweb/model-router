@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { rateLimiter } from "../src/rateLimiter";
+import { retryAfterFromHeaders } from "../src/router";
 
 describe("rateLimiter", () => {
   it("enforces rpm, tpm, and rpd limits", () => {
@@ -67,5 +68,13 @@ describe("rateLimiter", () => {
     } finally {
       console.warn = warn;
     }
+  });
+
+  it("extracts retry-after duration from HTTP headers", () => {
+    const headers = new Headers({
+      "x-ratelimit-reset-tokens": "2.5s",
+    });
+    const duration = retryAfterFromHeaders(headers);
+    expect(duration).toBe(2500);
   });
 });

@@ -12,6 +12,9 @@ export const openrouterAdapter: ProviderAdapter = {
   tier: "openrouter",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
+    if (estimatedTokens > config.openrouter.limits.tpm) {
+      return false;
+    }
     return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
@@ -30,7 +33,9 @@ export const openrouterAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(await readProviderError(res, "OpenRouter", config.openrouter.model));
+      const msg = await readProviderError(res, "OpenRouter", config.openrouter.model);
+      const { ProviderError } = await import("./openaiCompatible");
+      throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();

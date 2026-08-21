@@ -7,6 +7,18 @@ import type {
   ToolDefinition,
 } from "../types";
 
+export class ProviderError extends Error {
+  headers?: Headers;
+  status: number;
+
+  constructor(message: string, status: number, headers?: Headers) {
+    super(message);
+    this.name = "ProviderError";
+    this.status = status;
+    this.headers = headers;
+  }
+}
+
 export async function readProviderError(
   res: Response,
   provider: string,
