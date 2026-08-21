@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
-    "build": "node scripts/embed-version.js && bun build src/index.ts --compile --outfile dist/model-router",
+    "build": "bun build src/index.ts --compile --outfile dist/model-router",
     "build:darwin-arm64": "bun build src/index.ts --compile --target=bun-darwin-arm64 --outfile dist/model-router-darwin-arm64",
     "build:darwin-x64": "bun build src/index.ts --compile --target=bun-darwin-x64 --outfile dist/model-router-darwin-x64",
     "build:linux-x64": "bun build src/index.ts --compile --target=bun-linux-x64 --outfile dist/model-router-linux-x64",
