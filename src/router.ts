@@ -10,6 +10,7 @@ import { openrouterAdapter } from "./adapters/openrouter";
 import { cacheKey, setCached } from "./cache";
 import { config } from "./config";
 import { POLICIES } from "./policies";
+import { pruneNormalizedRequest } from "./pruner";
 import { rateLimiter } from "./rateLimiter";
 import { resolvers } from "./resolvers";
 import { AnthropicSSEWriter } from "./streaming/anthropicSSE";
@@ -86,14 +87,7 @@ export function planTierOrder(
     baseOrder = [...config.fallbackOrder];
   }
 
-  // Filter out tiers whose total 1-minute token budget (TPM) is smaller than the request size itself
-  return baseOrder.filter((tier) => {
-    const limits = limitsByTier[tier];
-    if (limits && limits.tpm > 0 && estimatedInputTokens > limits.tpm) {
-      return false;
-    }
-    return true;
-  });
+  return baseOrder;
 }
 
 export interface RouteResult {
@@ -150,12 +144,19 @@ export async function routeRequest(
       attempts.push({ tier, skipped: "no API key/token configured" });
       continue;
     }
-    if (!adapter.canHandle(req, estimated)) {
+    let effectiveReq = req;
+    let effectiveTokens = estimated;
+    if (limits.tpm > 0 && estimated > limits.tpm) {
+      effectiveReq = pruneNormalizedRequest(req, limits.tpm);
+      effectiveTokens = estimateTokens(effectiveReq);
+    }
+
+    if (!adapter.canHandle(effectiveReq, effectiveTokens)) {
       console.warn(`[router] skip ${tier}: request doesn't fit this tier (context/size)`);
       attempts.push({ tier, skipped: "request doesn't fit this tier (context/size)" });
       continue;
     }
-    if (!rateLimiter.canServe(tier, limits, estimated)) {
+    if (!rateLimiter.canServe(tier, limits, effectiveTokens)) {
       console.warn(`[router] skip ${tier}: rate limit reached`);
       attempts.push({ tier, skipped: "rate limit reached" });
       continue;
@@ -163,7 +164,12 @@ export async function routeRequest(
 
     try {
       console.log(`[router] trying ${tier}...`);
-      const response = await adapter.send(req);
+      if (effectiveTokens < estimated) {
+        console.log(
+          `[router] pruned request for ${tier} from ${estimated} to ${effectiveTokens} tokens`,
+        );
+      }
+      const response = await adapter.send(effectiveReq);
       const totalTokens = response.usage.input_tokens + response.usage.output_tokens || estimated;
       rateLimiter.record(tier, totalTokens);
       const key = await cacheKey(req);
@@ -324,12 +330,25 @@ export async function routeRequestStream(
     const limits = limitsByTier[tier];
     if (!hasCredentials(tier)) continue;
     if (!adapter.sendStream) continue;
-    if (!adapter.canHandle(req, estimated)) continue;
-    if (!rateLimiter.canServe(tier, limits, estimated)) continue;
+    let effectiveReq = req;
+    let effectiveTokens = estimated;
+    if (limits.tpm > 0 && estimated > limits.tpm) {
+      effectiveReq = pruneNormalizedRequest(req, limits.tpm);
+      effectiveTokens = estimateTokens(effectiveReq);
+    }
 
-    rateLimiter.record(tier, estimated);
+    if (!adapter.canHandle(effectiveReq, effectiveTokens)) continue;
+    if (!rateLimiter.canServe(tier, limits, effectiveTokens)) continue;
 
-    const rawStream = adapter.sendStream(req);
+    rateLimiter.record(tier, effectiveTokens);
+
+    if (effectiveTokens < estimated) {
+      console.log(
+        `[router] pruned stream request for ${tier} from ${estimated} to ${effectiveTokens} tokens`,
+      );
+    }
+
+    const rawStream = adapter.sendStream(effectiveReq);
     const stream = reconstructingStream(rawStream, async (response) => {
       const key = await cacheKey(req);
       setCached(key, response);
