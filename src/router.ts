@@ -151,6 +151,17 @@ export async function routeRequest(
       effectiveTokens = estimateTokens(effectiveReq);
     }
 
+    if (limits.tpm > 0 && effectiveTokens > limits.tpm) {
+      console.warn(
+        `[router] skip ${tier}: effective request size (${effectiveTokens} tokens) exceeds TPM limit (${limits.tpm})`,
+      );
+      attempts.push({
+        tier,
+        skipped: `effective request size (${effectiveTokens} tokens) exceeds TPM limit (${limits.tpm})`,
+      });
+      continue;
+    }
+
     if (!adapter.canHandle(effectiveReq, effectiveTokens)) {
       console.warn(`[router] skip ${tier}: request doesn't fit this tier (context/size)`);
       attempts.push({ tier, skipped: "request doesn't fit this tier (context/size)" });
@@ -335,6 +346,13 @@ export async function routeRequestStream(
     if (limits.tpm > 0 && estimated > limits.tpm) {
       effectiveReq = pruneNormalizedRequest(req, limits.tpm);
       effectiveTokens = estimateTokens(effectiveReq);
+    }
+
+    if (limits.tpm > 0 && effectiveTokens > limits.tpm) {
+      console.warn(
+        `[router] skip streaming ${tier}: effective request size (${effectiveTokens} tokens) exceeds TPM limit (${limits.tpm})`,
+      );
+      continue;
     }
 
     if (!adapter.canHandle(effectiveReq, effectiveTokens)) continue;
