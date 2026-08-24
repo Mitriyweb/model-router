@@ -284,7 +284,7 @@ describe("router", () => {
           JSON.stringify({
             error: {
               message:
-                'Gemini request failed for model "gemini-2.5-flash": Resource has been exhausted (e.g. check quota).',
+                'Gemini request failed for model "gemini-2.0-flash": Resource has been exhausted (e.g. check quota).',
               code: 429,
             },
           }),
