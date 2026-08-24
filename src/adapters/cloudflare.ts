@@ -1,10 +1,12 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
+  ProviderError,
   buildOpenAIPayload,
   createOpenAICompatibleStream,
   fitsOpenAICompatibleContext,
   openAIResponseToAnthropic,
+  readProviderError,
 } from "./openaiCompatible";
 
 export const cloudflareAdapter: ProviderAdapter = {
@@ -27,7 +29,8 @@ export const cloudflareAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(`Cloudflare AI error ${res.status}: ${await res.text()}`);
+      const msg = await readProviderError(res, "Cloudflare AI", config.cloudflare.model);
+      throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
@@ -42,6 +45,8 @@ export const cloudflareAdapter: ProviderAdapter = {
       { Authorization: `Bearer ${config.cloudflare.apiToken}` },
       payload,
       config.cloudflare.model,
+      undefined,
+      "cloudflare",
     );
   },
 };

@@ -1,10 +1,12 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
+  ProviderError,
   buildOpenAIPayload,
   createOpenAICompatibleStream,
   fitsOpenAICompatibleContext,
   openAIResponseToAnthropic,
+  readProviderError,
 } from "./openaiCompatible";
 
 export const nvidiaAdapter: ProviderAdapter = {
@@ -27,7 +29,8 @@ export const nvidiaAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(`NVIDIA NIM error ${res.status}: ${await res.text()}`);
+      const msg = await readProviderError(res, "NVIDIA NIM", config.nvidia.model);
+      throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
@@ -42,6 +45,8 @@ export const nvidiaAdapter: ProviderAdapter = {
       { Authorization: `Bearer ${config.nvidia.apiKey}` },
       payload,
       config.nvidia.model,
+      undefined,
+      "nvidia",
     );
   },
 };

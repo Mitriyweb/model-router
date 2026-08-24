@@ -1,10 +1,12 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
+  ProviderError,
   buildOpenAIPayload,
   createOpenAICompatibleStream,
   fitsOpenAICompatibleContext,
   openAIResponseToAnthropic,
+  readProviderError,
 } from "./openaiCompatible";
 
 export const mistralAdapter: ProviderAdapter = {
@@ -27,7 +29,8 @@ export const mistralAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(`Mistral error ${res.status}: ${await res.text()}`);
+      const msg = await readProviderError(res, "Mistral", config.mistral.model);
+      throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
@@ -42,6 +45,8 @@ export const mistralAdapter: ProviderAdapter = {
       { Authorization: `Bearer ${config.mistral.apiKey}` },
       payload,
       config.mistral.model,
+      undefined,
+      "mistral",
     );
   },
 };

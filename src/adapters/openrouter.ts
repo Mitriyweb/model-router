@@ -51,6 +51,8 @@ export const openrouterAdapter: ProviderAdapter = {
       },
       payload,
       config.openrouter.model,
+      undefined,
+      "openrouter",
     );
   },
 };

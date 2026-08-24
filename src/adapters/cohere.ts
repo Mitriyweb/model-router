@@ -1,7 +1,8 @@
 import { config } from "../config";
+import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
 import type { AnthropicResponse, ContentBlock, NormalizedRequest, ProviderAdapter } from "../types";
-import { anthropicToolsToOpenAI, safeJsonParse } from "./openaiCompatible";
+import { ProviderError, anthropicToolsToOpenAI, safeJsonParse } from "./openaiCompatible";
 
 function buildCoherePayload(req: NormalizedRequest, model: string, stream = false) {
   const messages: any[] = [];
@@ -100,7 +101,7 @@ export const cohereAdapter: ProviderAdapter = {
   tier: "cohere",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
-    return estimatedTokens <= 128_000;
+    return estimatedTokens <= config.routerMaxContextTokens;
   },
 
   async send(req: NormalizedRequest) {
@@ -116,7 +117,8 @@ export const cohereAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(`Cohere error ${res.status}: ${await res.text()}`);
+      const raw = await res.text();
+      throw new ProviderError(`Cohere error ${res.status}: ${raw}`, res.status, res.headers);
     }
 
     const data = await res.json();
@@ -143,7 +145,17 @@ export const cohereAdapter: ProviderAdapter = {
           });
 
           if (!res.ok || !res.body) {
-            writer.error(`Cohere error ${res.status}: ${await res.text().catch(() => "")}`);
+            const rawText = await res.text().catch(() => "");
+            const err = new ProviderError(
+              `Cohere error ${res.status}: ${rawText}`,
+              res.status,
+              res.headers,
+            );
+            const retryMs = retryAfterFromError(err);
+            if (retryMs !== undefined) {
+              rateLimiter.markUnavailable("cohere", retryMs);
+            }
+            writer.error(`Cohere error ${res.status}: ${rawText}`);
             return;
           }
 
@@ -213,6 +225,10 @@ export const cohereAdapter: ProviderAdapter = {
 
           writer.end(sawTool ? "tool_use" : "end_turn", inputTokens, outputTokens);
         } catch (err: any) {
+          const retryMs = retryAfterFromError(err);
+          if (retryMs !== undefined) {
+            rateLimiter.markUnavailable("cohere", retryMs);
+          }
           writer.error(err.message ?? String(err));
         }
       },

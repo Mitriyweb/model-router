@@ -34,6 +34,6 @@ export const localAdapter: ProviderAdapter = {
   sendStream(req: NormalizedRequest) {
     const payload = buildOpenAIPayload(req, config.local.model);
     const url = `${config.local.baseUrl}/chat/completions`;
-    return createOpenAICompatibleStream(url, {}, payload, config.local.model);
+    return createOpenAICompatibleStream(url, {}, payload, config.local.model, undefined, "local");
   },
 };

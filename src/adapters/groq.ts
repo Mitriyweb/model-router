@@ -46,6 +46,8 @@ export const groqAdapter: ProviderAdapter = {
       { Authorization: `Bearer ${config.groq.apiKey}` },
       payload,
       config.groq.model,
+      undefined,
+      "groq",
     );
   },
 };

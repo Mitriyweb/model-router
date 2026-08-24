@@ -77,4 +77,17 @@ describe("rateLimiter", () => {
     const duration = retryAfterFromHeaders(headers);
     expect(duration).toBe(2500);
   });
+
+  it("resets and clears persisted state immediately", async () => {
+    await rateLimiter.reset();
+    rateLimiter.record("groq", 100);
+    expect(rateLimiter.snapshot("groq", { rpm: 10, tpm: 1000, rpd: 100 }).requestsThisMinute).toBe(
+      1,
+    );
+
+    await rateLimiter.reset();
+    expect(rateLimiter.snapshot("groq", { rpm: 10, tpm: 1000, rpd: 100 }).requestsThisMinute).toBe(
+      0,
+    );
+  });
 });
