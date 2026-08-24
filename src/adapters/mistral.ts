@@ -16,9 +16,10 @@ export const mistralAdapter: ProviderAdapter = {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.mistral.model);
     const url = `${config.mistral.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -26,6 +27,7 @@ export const mistralAdapter: ProviderAdapter = {
         Authorization: `Bearer ${config.mistral.apiKey}`,
       },
       body: JSON.stringify({ ...payload, stream: false }),
+      signal,
     });
 
     if (!res.ok) {
@@ -37,15 +39,16 @@ export const mistralAdapter: ProviderAdapter = {
     return openAIResponseToAnthropic(data, config.mistral.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.mistral.model);
     const url = `${config.mistral.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.mistral.apiKey}` },
       payload,
       config.mistral.model,
-      undefined,
+      signal,
       "mistral",
     );
   },

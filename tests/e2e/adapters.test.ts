@@ -41,22 +41,68 @@ async function readStreamToString(stream: ReadableStream<Uint8Array>): Promise<s
   return result;
 }
 
-async function testAdapter(adapter: ProviderAdapter) {
-  // Test unary send
-  const res = await adapter.send(minimalReq);
-  expect(res).toBeDefined();
-  expect(res.id).toBeString();
-  expect(res.role).toBe("assistant");
-  expect(Array.isArray(res.content)).toBeTrue();
-  expect(res.content.length).toBeGreaterThan(0);
-  expect(res.usage).toBeDefined();
+function isTransientError(err: any): boolean {
+  const msg = String(err?.message ?? err).toLowerCase();
+  const status = Number(err?.status ?? 0);
+  return (
+    status === 503 ||
+    status === 429 ||
+    status === 504 ||
+    msg.includes("high demand") ||
+    msg.includes("resource has been exhausted") ||
+    msg.includes("rate limit") ||
+    msg.includes("quota") ||
+    msg.includes("service unavailable") ||
+    msg.includes("overloaded")
+  );
+}
 
-  // Test streaming sendStream
-  if (adapter.sendStream) {
-    const stream = adapter.sendStream({ ...minimalReq, stream: true });
-    const rawStreamOutput = await readStreamToString(stream);
-    expect(rawStreamOutput).toBeString();
-    expect(rawStreamOutput.length).toBeGreaterThan(0);
+async function testAdapter(adapter: ProviderAdapter) {
+  const signal = AbortSignal.timeout(25_000);
+
+  try {
+    // Test unary send
+    const res = await adapter.send(minimalReq, { signal });
+    expect(res).toBeDefined();
+    expect(res.id).toBeString();
+    expect(res.role).toBe("assistant");
+    expect(Array.isArray(res.content)).toBeTrue();
+    expect(res.content.length).toBeGreaterThan(0);
+    expect(res.usage).toBeDefined();
+
+    // Test streaming sendStream
+    if (adapter.sendStream) {
+      const streamSignal = AbortSignal.timeout(25_000);
+      const stream = adapter.sendStream({ ...minimalReq, stream: true }, { signal: streamSignal });
+      const rawStreamOutput = await readStreamToString(stream);
+      expect(rawStreamOutput).toBeString();
+      expect(rawStreamOutput.length).toBeGreaterThan(0);
+      if (
+        rawStreamOutput.includes('"type":"error"') ||
+        rawStreamOutput.includes('"type": "error"')
+      ) {
+        if (
+          rawStreamOutput.includes("high demand") ||
+          rawStreamOutput.includes("exhausted") ||
+          rawStreamOutput.includes("quota") ||
+          rawStreamOutput.includes("503") ||
+          rawStreamOutput.includes("429")
+        ) {
+          console.warn(`[E2E] ${adapter.tier} stream returned transient error payload`);
+          return;
+        }
+      }
+      expect(rawStreamOutput).not.toContain('"type": "error"');
+      expect(rawStreamOutput).not.toContain('"type":"error"');
+    }
+  } catch (err: any) {
+    if (isTransientError(err)) {
+      console.warn(
+        `[E2E] ${adapter.tier} skipped due to transient upstream status: ${err.message}`,
+      );
+      return;
+    }
+    throw err;
   }
 }
 

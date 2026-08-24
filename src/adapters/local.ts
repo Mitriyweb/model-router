@@ -14,13 +14,15 @@ export const localAdapter: ProviderAdapter = {
     return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.local.model);
     const url = `${config.local.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...payload, stream: false }),
+      signal,
     });
 
     if (!res.ok) {
@@ -31,9 +33,10 @@ export const localAdapter: ProviderAdapter = {
     return openAIResponseToAnthropic(data, config.local.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.local.model);
     const url = `${config.local.baseUrl}/chat/completions`;
-    return createOpenAICompatibleStream(url, {}, payload, config.local.model, undefined, "local");
+    const signal = opts?.signal ?? req.signal;
+    return createOpenAICompatibleStream(url, {}, payload, config.local.model, signal, "local");
   },
 };

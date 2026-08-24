@@ -15,9 +15,10 @@ export const groqAdapter: ProviderAdapter = {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.groq.model);
     const url = `${config.groq.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -25,6 +26,7 @@ export const groqAdapter: ProviderAdapter = {
         Authorization: `Bearer ${config.groq.apiKey}`,
       },
       body: JSON.stringify({ ...payload, stream: false }),
+      signal,
     });
 
     if (!res.ok) {
@@ -38,15 +40,16 @@ export const groqAdapter: ProviderAdapter = {
     return openAIResponseToAnthropic(data, config.groq.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.groq.model);
     const url = `${config.groq.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.groq.apiKey}` },
       payload,
       config.groq.model,
-      undefined,
+      signal,
       "groq",
     );
   },

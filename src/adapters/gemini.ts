@@ -186,9 +186,10 @@ export const geminiAdapter: ProviderAdapter = {
     return true;
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildGeminiPayload(req);
     const url = `${config.gemini.baseUrl}/models/${config.gemini.model}:streamGenerateContent?alt=sse&key=${config.gemini.apiKey}`;
+    const signal = opts?.signal ?? req.signal;
 
     return new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -205,6 +206,7 @@ export const geminiAdapter: ProviderAdapter = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
+            signal,
           });
           if (!res.ok || !res.body) {
             const rawText = await res.text().catch(() => "");
@@ -284,13 +286,15 @@ export const geminiAdapter: ProviderAdapter = {
     });
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildGeminiPayload(req);
     const url = `${config.gemini.baseUrl}/models/${config.gemini.model}:generateContent?key=${config.gemini.apiKey}`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal,
     });
     if (!res.ok) {
       const msg = await readProviderError(res, "Gemini", config.gemini.model);
