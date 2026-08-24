@@ -1,6 +1,6 @@
 {
   "name": "model-router",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Anthropic-compatible proxy for free-tier and local LLMs (Groq, Gemini Flash, OpenRouter, Ollama)",
   "main": "src/index.ts",
   "type": "module",
@@ -21,6 +21,7 @@
     "lint:fix": "biome check --write src/ tests/",
     "format": "biome format --write src/ tests/",
     "test": "bun test",
+    "test:e2e": "RUN_E2E=true bun test tests/e2e",
     "validate": "bun run typecheck && bun run lint && bun test",
     "precommit": "bun run validate",
     "prepare": "which simple-git-hooks > /dev/null 2>&1 && simple-git-hooks || true"
