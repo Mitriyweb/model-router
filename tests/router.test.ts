@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import { cerebrasAdapter } from "../src/adapters/cerebras";
 import { sanitizeGeminiSchema } from "../src/adapters/gemini";
 import { groqAdapter } from "../src/adapters/groq";
+import { mistralAdapter } from "../src/adapters/mistral";
 import { readProviderError } from "../src/adapters/openaiCompatible";
 import { config } from "../src/config";
 import { POLICIES } from "../src/policies";
@@ -259,5 +260,65 @@ describe("router", () => {
         type: "string",
       },
     });
+  });
+
+  it("marks Gemini unavailable when upstream reports resource quota exhaustion", async () => {
+    const req: NormalizedRequest = {
+      systemPrompt: "Hi",
+      messages: [{ role: "user", content: "Hello" }],
+      tools: [],
+      stream: false,
+    };
+
+    const originalFetch = globalThis.fetch;
+    const originalApiKey = config.gemini.apiKey;
+    const originalFallback = [...config.fallbackOrder];
+
+    await rateLimiter.reset();
+    config.gemini.apiKey = "test-key";
+    config.fallbackOrder = ["gemini"];
+
+    const fetchMock = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              message:
+                'Gemini request failed for model "gemini-3.7-flash": Resource has been exhausted (e.g. check quota).',
+              code: 429,
+            },
+          }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+    );
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      await expect(routeRequest(req)).rejects.toThrow("All tiers exhausted or unavailable");
+      expect(rateLimiter.canServe("gemini", config.gemini.limits, 100)).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+      config.gemini.apiKey = originalApiKey;
+      config.fallbackOrder = originalFallback;
+      await rateLimiter.reset();
+    }
+  });
+
+  it("prunes large requests for Mistral when estimated tokens exceed target limit", () => {
+    const req: NormalizedRequest = {
+      systemPrompt: "System",
+      messages: Array.from({ length: 50 }, (_, i) => ({
+        role: i % 2 === 0 ? "user" : "assistant",
+        content: `Message block ${i}: ${"hello world ".repeat(20)}`,
+      })),
+      tools: [],
+      stream: false,
+    };
+
+    expect(mistralAdapter.canHandle(req, estimateTokens(req))).toBe(true);
   });
 });

@@ -1,9 +1,11 @@
+import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
 import type {
   AnthropicMessage,
   AnthropicResponse,
   ContentBlock,
   NormalizedRequest,
+  TierName,
   ToolDefinition,
 } from "../types";
 
@@ -368,6 +370,7 @@ export function createOpenAICompatibleStream(
   payload: object,
   model: string,
   signal?: AbortSignal,
+  tier?: TierName,
 ): ReadableStream<Uint8Array> {
   return new ReadableStream({
     async start(controller) {
@@ -382,15 +385,25 @@ export function createOpenAICompatibleStream(
         if (!res.ok) {
           const message = await readProviderError(
             res,
-            model.includes("/") ? "OpenAI-compatible provider" : "OpenAI-compatible provider",
+            tier ??
+              (model.includes("/") ? "OpenAI-compatible provider" : "OpenAI-compatible provider"),
             model,
           );
+          const err = new ProviderError(message, res.status, res.headers);
+          const retryMs = retryAfterFromError(err);
+          if (retryMs !== undefined && tier) {
+            rateLimiter.markUnavailable(tier, retryMs);
+          }
           writer.error(message);
           return;
         }
         await streamOpenAIToAnthropic(res, model, writer);
       } catch (err: any) {
         if (signal?.aborted) return;
+        const retryMs = retryAfterFromError(err);
+        if (retryMs !== undefined && tier) {
+          rateLimiter.markUnavailable(tier, retryMs);
+        }
         writer.error(err.message ?? String(err));
       }
     },

@@ -1,7 +1,8 @@
 import { config } from "../config";
+import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
 import type { AnthropicResponse, ContentBlock, NormalizedRequest, ProviderAdapter } from "../types";
-import { readProviderError } from "./openaiCompatible";
+import { ProviderError, readProviderError } from "./openaiCompatible";
 
 function buildToolIdToNameMap(req: NormalizedRequest): Map<string, string> {
   const map = new Map<string, string>();
@@ -206,7 +207,16 @@ export const geminiAdapter: ProviderAdapter = {
             body: JSON.stringify(payload),
           });
           if (!res.ok || !res.body) {
-            writer.error(`Gemini ${res.status}: ${await res.text().catch(() => "")}`);
+            const rawText = await res.text().catch(() => "");
+            const errMsg = await readProviderError(res, "Gemini", config.gemini.model).catch(
+              () => `Gemini ${res.status}: ${rawText}`,
+            );
+            const err = new ProviderError(errMsg, res.status, res.headers);
+            const retryMs = retryAfterFromError(err);
+            if (retryMs !== undefined) {
+              rateLimiter.markUnavailable("gemini", retryMs);
+            }
+            writer.error(errMsg);
             return;
           }
 
@@ -264,6 +274,10 @@ export const geminiAdapter: ProviderAdapter = {
 
           writer.end(sawFunctionCall ? "tool_use" : "end_turn", inputTokens, outputTokens);
         } catch (err: any) {
+          const retryMs = retryAfterFromError(err);
+          if (retryMs !== undefined) {
+            rateLimiter.markUnavailable("gemini", retryMs);
+          }
           writer.error(err.message ?? String(err));
         }
       },
@@ -279,7 +293,8 @@ export const geminiAdapter: ProviderAdapter = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      throw new Error(await readProviderError(res, "Gemini", config.gemini.model));
+      const msg = await readProviderError(res, "Gemini", config.gemini.model);
+      throw new ProviderError(msg, res.status, res.headers);
     }
     const data = await res.json();
     return geminiResponseToAnthropic(data);

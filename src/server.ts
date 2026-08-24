@@ -214,6 +214,15 @@ export function startServer(port = config.port) {
       if (url.pathname === "/status" && request.method === "GET") {
         return handleStatus();
       }
+      if (
+        (url.pathname === "/reset" ||
+          url.pathname === "/reset-state" ||
+          url.pathname === "/v1/reset") &&
+        (request.method === "POST" || request.method === "DELETE")
+      ) {
+        await rateLimiter.reset();
+        return json({ status: "ok", message: "rate limiter state reset" });
+      }
       if (url.pathname === "/health" && request.method === "GET") {
         return json({ status: "ok" });
       }

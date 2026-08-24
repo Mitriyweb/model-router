@@ -1,10 +1,12 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
+  ProviderError,
   buildOpenAIPayload,
   createOpenAICompatibleStream,
   fitsOpenAICompatibleContext,
   openAIResponseToAnthropic,
+  readProviderError,
 } from "./openaiCompatible";
 
 export const cerebrasAdapter: ProviderAdapter = {
@@ -27,7 +29,8 @@ export const cerebrasAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      throw new Error(`Cerebras error ${res.status}: ${await res.text()}`);
+      const msg = await readProviderError(res, "Cerebras", config.cerebras.model);
+      throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
@@ -42,6 +45,8 @@ export const cerebrasAdapter: ProviderAdapter = {
       { Authorization: `Bearer ${config.cerebras.apiKey}` },
       payload,
       config.cerebras.model,
+      undefined,
+      "cerebras",
     );
   },
 };
