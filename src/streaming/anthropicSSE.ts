@@ -13,7 +13,7 @@ export class AnthropicSSEWriter {
         writer.textDelta(block.text);
         writer.stopBlock();
       } else if (block.type === "tool_use") {
-        writer.startTool(block.id, block.name);
+        writer.startTool(block.id, block.name, block.thoughtSignature ?? block.thought_signature);
         writer.toolInputDelta(JSON.stringify(block.input));
         writer.stopBlock();
       }
@@ -80,14 +80,20 @@ export class AnthropicSSEWriter {
     });
   }
 
-  startTool(id: string, name: string) {
+  startTool(id: string, name: string, thoughtSignature?: string) {
     this.stopBlock();
     this.blockIndex++;
     this.openBlock = true;
     this.emit("content_block_start", {
       type: "content_block_start",
       index: this.blockIndex,
-      content_block: { type: "tool_use", id, name, input: {} },
+      content_block: {
+        type: "tool_use",
+        id,
+        name,
+        input: {},
+        ...(thoughtSignature ? { thoughtSignature } : {}),
+      },
     });
     return this.blockIndex;
   }

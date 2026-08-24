@@ -99,7 +99,14 @@ function buildGeminiPayload(req: NormalizedRequest) {
       for (const b of m.content) {
         if (b.type === "text") parts.push({ text: b.text });
         if (b.type === "tool_use") {
-          parts.push({ functionCall: { name: b.name, args: b.input } });
+          const signature = b.thoughtSignature ?? b.thought_signature;
+          parts.push({
+            functionCall: {
+              name: b.name,
+              args: b.input,
+              ...(signature ? { thoughtSignature: signature } : {}),
+            },
+          });
         }
         if (b.type === "tool_result") {
           // Gemini requires the function name, not the tool_use_id UUID
@@ -149,11 +156,17 @@ function geminiResponseToAnthropic(data: any): AnthropicResponse {
   for (const p of parts) {
     if (p.text) content.push({ type: "text", text: p.text });
     if (p.functionCall) {
+      const signature =
+        p.thoughtSignature ??
+        p.thought_signature ??
+        p.functionCall.thoughtSignature ??
+        p.functionCall.thought_signature;
       content.push({
         type: "tool_use",
         id: crypto.randomUUID(),
         name: p.functionCall.name,
         input: p.functionCall.args ?? {},
+        ...(signature ? { thought_signature: signature, thoughtSignature: signature } : {}),
       });
     }
   }
@@ -260,7 +273,12 @@ export const geminiAdapter: ProviderAdapter = {
                     writer.stopBlock();
                     textBlockOpen = false;
                   }
-                  writer.startTool(crypto.randomUUID(), p.functionCall.name);
+                  const signature =
+                    p.thoughtSignature ??
+                    p.thought_signature ??
+                    p.functionCall.thoughtSignature ??
+                    p.functionCall.thought_signature;
+                  writer.startTool(crypto.randomUUID(), p.functionCall.name, signature);
                   writer.toolInputDelta(JSON.stringify(p.functionCall.args ?? {}));
                   writer.stopBlock();
                   sawFunctionCall = true;
