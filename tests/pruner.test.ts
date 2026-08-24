@@ -35,8 +35,13 @@ describe("pruner", () => {
     const pruned = pruneNormalizedRequest(req, 200, 2);
     expect(pruned.messages.length).toBeLessThan(messages.length);
     expect(pruned.systemPrompt).toBe(req.systemPrompt);
-    // Preserves recent messages
-    expect(pruned.messages[pruned.messages.length - 1]).toEqual(messages[messages.length - 1]);
+    // Preserves recent messages role and content prefix/suffix
+    expect(pruned.messages[pruned.messages.length - 1].role).toBe(
+      messages[messages.length - 1].role,
+    );
+    expect(pruned.messages[pruned.messages.length - 1].content).toContain(
+      "This is message number 20",
+    );
   });
 
   it("preserves tool call sequences during pruning", () => {
@@ -71,5 +76,21 @@ describe("pruner", () => {
     if (toolResults.length > 0) {
       expect(toolUses.length).toBeGreaterThan(0);
     }
+  });
+
+  it("truncates message content when single message exceeds targetTokenLimit", () => {
+    const req: NormalizedRequest = {
+      systemPrompt: "System prompt",
+      messages: [
+        { role: "user", content: "Very large content. ".repeat(3000) }, // ~30,000+ tokens
+      ],
+      tools: [],
+      stream: false,
+    };
+
+    const pruned = pruneNormalizedRequest(req, 8000);
+    expect(pruned.messages.length).toBe(1);
+    expect(typeof pruned.messages[0].content).toBe("string");
+    expect(pruned.messages[0].content).toContain("[...content pruned...]");
   });
 });

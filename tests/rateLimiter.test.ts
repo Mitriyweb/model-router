@@ -79,6 +79,17 @@ describe("rateLimiter", () => {
     expect(duration).toBe(2500);
   });
 
+  it("extracts retry duration from Gemini quota error messages", () => {
+    const { retryAfterFromError } = require("../src/rateLimiter");
+    const geminiErrorMsg = `Gemini request failed for model "gemini-3.5-flash": You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 908.96054ms.`;
+
+    const ms = retryAfterFromError(new Error(geminiErrorMsg));
+    expect(ms).toBe(1000); // 908.96054ms rounded up with min 1000ms limit
+
+    const geminiSecErrorMsg = "Quota exceeded. Please retry in 12.5s.";
+    expect(retryAfterFromError(new Error(geminiSecErrorMsg))).toBe(12500);
+  });
+
   it("resets and clears persisted state immediately", async () => {
     await rateLimiter.reset();
     rateLimiter.record(TierName.Groq, 100);

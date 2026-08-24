@@ -7,7 +7,7 @@ import { readProviderError } from "../src/adapters/openaiCompatible";
 import { config } from "../src/config";
 import { POLICIES } from "../src/policies";
 import { rateLimiter } from "../src/rateLimiter";
-import { estimateTokens, planTierOrder, routeRequest } from "../src/router";
+import { estimateTokens, planTierOrder, routeRequest, routeRequestStream } from "../src/router";
 import { startServer } from "../src/server";
 import type { NormalizedRequest } from "../src/types";
 import { TierName } from "../src/types";
@@ -127,6 +127,113 @@ describe("router", () => {
     }
   });
 
+  it("prunes large single messages down to fit Cerebras TPM limit and route successfully", async () => {
+    await rateLimiter.reset();
+    const largeContent = "This is a very long line of test text. ".repeat(3500); // ~33,000+ tokens
+    const req: NormalizedRequest = {
+      systemPrompt: "You are a helpful assistant.",
+      messages: [{ role: "user", content: largeContent }],
+      tools: [],
+      stream: false,
+    };
+
+    const originalApiKey = config.cerebras.apiKey;
+    const originalFallback = [...config.fallbackOrder];
+    const originalHasCustom = config.hasCustomFallbackOrder;
+    const originalTpm = config.cerebras.limits.tpm;
+    const originalFetch = globalThis.fetch;
+
+    config.cerebras.apiKey = "test-cerebras-key";
+    config.cerebras.limits.tpm = 8000;
+    config.fallbackOrder = [TierName.Cerebras];
+    config.hasCustomFallbackOrder = true;
+
+    const fetchMock = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            id: "chatcmpl-cerebras",
+            choices: [
+              {
+                index: 0,
+                message: { role: "assistant", content: "Success" },
+                finish_reason: "stop",
+              },
+            ],
+            usage: { prompt_tokens: 7000, completion_tokens: 5, total_tokens: 7005 },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    );
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const result = await routeRequest(req);
+      expect(result.tierUsed).toBe(TierName.Cerebras);
+    } finally {
+      globalThis.fetch = originalFetch;
+      config.cerebras.apiKey = originalApiKey;
+      config.cerebras.limits.tpm = originalTpm;
+      config.fallbackOrder = originalFallback;
+      config.hasCustomFallbackOrder = originalHasCustom;
+      await rateLimiter.reset();
+    }
+  });
+
+  it("prunes large single messages down to fit streaming Cerebras TPM limit", async () => {
+    await rateLimiter.reset();
+    const largeContent = "This is a very long line of test streaming text. ".repeat(3500); // ~33,000+ tokens
+    const req: NormalizedRequest = {
+      systemPrompt: "You are a helpful assistant.",
+      messages: [{ role: "user", content: largeContent }],
+      tools: [],
+      stream: true,
+    };
+
+    const originalApiKey = config.cerebras.apiKey;
+    const originalFallback = [...config.fallbackOrder];
+    const originalHasCustom = config.hasCustomFallbackOrder;
+    const originalTpm = config.cerebras.limits.tpm;
+    const originalFetch = globalThis.fetch;
+
+    config.cerebras.apiKey = "test-cerebras-key";
+    config.cerebras.limits.tpm = 8000;
+    config.fallbackOrder = [TierName.Cerebras];
+    config.hasCustomFallbackOrder = true;
+
+    const streamResponse = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n'),
+        );
+        controller.close();
+      },
+    });
+
+    const fetchMock = mock(
+      async () =>
+        new Response(streamResponse, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+    );
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const result = await routeRequestStream(req);
+      expect(result.tierUsed).toBe(TierName.Cerebras);
+    } finally {
+      globalThis.fetch = originalFetch;
+      config.cerebras.apiKey = originalApiKey;
+      config.cerebras.limits.tpm = originalTpm;
+      config.fallbackOrder = originalFallback;
+      config.hasCustomFallbackOrder = originalHasCustom;
+      await rateLimiter.reset();
+    }
+  });
+
   it("supports context pruning for Cerebras requests when estimated tokens exceed limit", () => {
     const req: NormalizedRequest = {
       systemPrompt: "Hi",
@@ -152,7 +259,7 @@ describe("router", () => {
     const originalFallback = [...config.fallbackOrder];
     const originalHasCustom = config.hasCustomFallbackOrder;
 
-    rateLimiter.reset();
+    await rateLimiter.reset();
     config.groq.apiKey = "test-key";
     config.groq.baseUrl = "https://example.invalid";
     config.fallbackOrder = [TierName.Groq];
@@ -187,7 +294,7 @@ describe("router", () => {
       config.groq.baseUrl = originalBaseUrl;
       config.fallbackOrder = originalFallback;
       config.hasCustomFallbackOrder = originalHasCustom;
-      rateLimiter.reset();
+      await rateLimiter.reset();
     }
   });
 

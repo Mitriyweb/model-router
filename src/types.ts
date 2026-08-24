@@ -13,7 +13,14 @@ export enum StopReason {
 
 export type ContentBlock =
   | { type: "text"; text: string }
-  | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
+  | {
+      type: "tool_use";
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+      thought_signature?: string;
+      thoughtSignature?: string;
+    }
   | { type: "tool_result"; tool_use_id: string; content: string | unknown; is_error?: boolean };
 
 export interface AnthropicMessage {
