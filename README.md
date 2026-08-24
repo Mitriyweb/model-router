@@ -226,6 +226,18 @@ bun run dev
 # Run complete validation (typecheck + lint + tests)
 bun run validate
 
+# Run live E2E adapter tests against configured provider APIs (.env)
+bun run test:e2e
+
+### E2E Adapter Testing
+
+`model-router` includes dedicated End-to-End (E2E) tests for each adapter (`cerebras`, `cloudflare`, `cohere`, `gemini`, `groq`, `local`, `mistral`, `nvidia`, `openrouter`).
+
+- **CI & Pre-commit Safety**: E2E tests do NOT run during CI (`bun test` or `bun run validate`) or pre-commit hooks to avoid consuming provider quotas or failing build pipelines without credentials.
+- **Direct Live Verification**: Running `bun run test:e2e` sets `RUN_E2E=true` and directly issues requests via each adapter's `send()` and `sendStream()` methods to confirm API connectivity, authentication, and correct response translation.
+- **Token Efficiency**: Each test sends a minimal payload (`maxTokens: 5`, single-word prompt) to verify availability while consuming minimal tokens.
+- **Environment Gating**: An adapter test only executes if its required key (e.g., `GROQ_API_KEY`, `GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN`) is set and valid in `.env` (or environment variables). Set `LOCAL_E2E=true` to test local Ollama servers.
+
 # Compile standalone executable
 bun run build
 

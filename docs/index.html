@@ -420,6 +420,16 @@
       </div>
     </div>
   </div>
+
+  <!-- E2E TESTING -->
+  <div style="background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.2);border-radius:var(--radius);padding:1.4rem;margin-top:2rem">
+    <div style="font-weight:600;margin-bottom:0.6rem;color:var(--accent2)">🧪 E2E Adapter Testing</div>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem">Run direct live checks against configured provider APIs to verify keys, provider accessibility, and stream functionality with minimal token usage (<code style="color:#e06c75">maxTokens: 5</code>):</p>
+    <div class="code-block">
+      <span class="cmd2">bun run test:e2e</span>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.6rem">E2E tests do not run during CI or pre-commit checks. An adapter is tested only if its corresponding key exists in <code style="color:#e06c75">.env</code>.</p>
+  </div>
 </section>
 
 <!-- CLIENTS -->
