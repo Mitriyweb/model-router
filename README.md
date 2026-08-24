@@ -111,7 +111,7 @@ aider --model openai/model-router-auto
 - **Provider**: `OpenAI Compatible`
 - **Base URL**: `http://localhost:8787/v1`
 - **API Key**: `dummy`
-- **Model ID**: `model-router-auto` (or `codestral-latest`, `llama-3.3-70b`, `gemini-2.0-flash`)
+- **Model ID**: `model-router-auto` (or `codestral-latest`, `llama-3.3-70b`, `gemini-3.7-flash`)
 
 ---
 

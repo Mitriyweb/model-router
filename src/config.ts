@@ -111,7 +111,7 @@ export const config: Config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY ?? "",
     baseUrl: process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta",
-    model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+    model: process.env.GEMINI_MODEL ?? "gemini-3.7-flash",
     limits: {
       rpm: Number(process.env.GEMINI_RPM ?? 15),
       tpm: Number(process.env.GEMINI_TPM ?? 1_000_000),
