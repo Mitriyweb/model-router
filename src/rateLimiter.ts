@@ -234,13 +234,26 @@ export function retryAfterFromError(err: unknown): number | undefined {
 
   if (!isRateLimitSignal) return undefined;
 
-  const match = message.match(/retry in\s+([\d.]+)\s*(ms|s|m)?/i);
+  const match = message.match(
+    /retry\s+(?:in|after)\s+([\d.]+)\s*(ms|milliseconds|s|seconds|sec|m|minutes|min)?/i,
+  );
   if (!match) return 60_000;
 
   const amount = Number(match[1]);
   if (!Number.isFinite(amount)) return 60_000;
+
+  let multiplier = 1_000;
   const unit = match[2]?.toLowerCase();
-  const multiplier = unit === "ms" ? 1 : unit === "m" ? 60_000 : 1_000;
+  if (unit) {
+    if (unit.startsWith("ms") || unit.startsWith("milli")) {
+      multiplier = 1;
+    } else if (unit.startsWith("min") || unit === "m") {
+      multiplier = 60_000;
+    } else if (unit.startsWith("s")) {
+      multiplier = 1_000;
+    }
+  }
+
   return Math.max(1_000, Math.ceil(amount * multiplier));
 }
 
