@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
+import { TierName } from "../types";
 import {
   ProviderError,
   buildOpenAIPayload,
@@ -21,7 +22,7 @@ function hfHeaders(): Record<string, string> {
 }
 
 export const huggingfaceAdapter: ProviderAdapter = {
-  tier: "huggingface",
+  tier: TierName.HuggingFace,
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     if (!config.huggingface.model) {
@@ -84,6 +85,13 @@ export const huggingfaceAdapter: ProviderAdapter = {
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.huggingface.baseUrl}/chat/completions`;
 
-    return createOpenAICompatibleStream(url, hfHeaders(), payload, model);
+    return createOpenAICompatibleStream(
+      url,
+      hfHeaders(),
+      payload,
+      model,
+      undefined,
+      TierName.HuggingFace,
+    );
   },
 };

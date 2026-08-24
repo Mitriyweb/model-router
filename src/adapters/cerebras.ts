@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
+import { TierName } from "../types";
 import {
   ProviderError,
   buildOpenAIPayload,
@@ -10,7 +11,7 @@ import {
 } from "./openaiCompatible";
 
 export const cerebrasAdapter: ProviderAdapter = {
-  tier: "cerebras",
+  tier: TierName.Cerebras,
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
@@ -49,7 +50,7 @@ export const cerebrasAdapter: ProviderAdapter = {
       payload,
       config.cerebras.model,
       signal,
-      "cerebras",
+      TierName.Cerebras,
     );
   },
 };

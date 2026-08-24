@@ -1,4 +1,5 @@
-import type { TierLimits, TierName } from "./types";
+import type { TierLimits } from "./types";
+import { TierName } from "./types";
 
 export interface Config {
   port: number;
@@ -70,16 +71,16 @@ export interface Config {
 }
 
 const defaultFallbackOrder: TierName[] = [
-  "cerebras",
-  "groq",
-  "gemini",
-  "openrouter",
-  "mistral",
-  "nvidia",
-  "huggingface",
-  "cloudflare",
-  "cohere",
-  "local",
+  TierName.Cerebras,
+  TierName.Groq,
+  TierName.Gemini,
+  TierName.OpenRouter,
+  TierName.Mistral,
+  TierName.Nvidia,
+  TierName.HuggingFace,
+  TierName.Cloudflare,
+  TierName.Cohere,
+  TierName.Local,
 ];
 
 function parseFallbackOrder(value?: string): TierName[] {

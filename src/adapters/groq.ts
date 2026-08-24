@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
+import { TierName } from "../types";
 import {
   ProviderError,
   buildOpenAIPayload,
@@ -9,7 +10,7 @@ import {
 } from "./openaiCompatible";
 
 export const groqAdapter: ProviderAdapter = {
-  tier: "groq",
+  tier: TierName.Groq,
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
@@ -50,7 +51,7 @@ export const groqAdapter: ProviderAdapter = {
       payload,
       config.groq.model,
       signal,
-      "groq",
+      TierName.Groq,
     );
   },
 };

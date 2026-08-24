@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
+import { TierName } from "../types";
 import {
   ProviderError,
   buildOpenAIPayload,
@@ -10,7 +11,7 @@ import {
 } from "./openaiCompatible";
 
 export const nvidiaAdapter: ProviderAdapter = {
-  tier: "nvidia",
+  tier: TierName.Nvidia,
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return fitsOpenAICompatibleContext(estimatedTokens);
@@ -49,7 +50,7 @@ export const nvidiaAdapter: ProviderAdapter = {
       payload,
       config.nvidia.model,
       signal,
-      "nvidia",
+      TierName.Nvidia,
     );
   },
 };

@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
+import { TierName } from "../types";
 import {
   ProviderError,
   buildOpenAIPayload,
@@ -10,7 +11,7 @@ import {
 } from "./openaiCompatible";
 
 export const openrouterAdapter: ProviderAdapter = {
-  tier: "openrouter",
+  tier: TierName.OpenRouter,
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
@@ -55,7 +56,7 @@ export const openrouterAdapter: ProviderAdapter = {
       payload,
       config.openrouter.model,
       signal,
-      "openrouter",
+      TierName.OpenRouter,
     );
   },
 };

@@ -1,4 +1,15 @@
-export type Role = "user" | "assistant" | "system";
+export enum Role {
+  User = "user",
+  Assistant = "assistant",
+  System = "system",
+}
+
+export enum StopReason {
+  EndTurn = "end_turn",
+  MaxTokens = "max_tokens",
+  StopSequence = "stop_sequence",
+  ToolUse = "tool_use",
+}
 
 export type ContentBlock =
   | { type: "text"; text: string }
@@ -6,7 +17,7 @@ export type ContentBlock =
   | { type: "tool_result"; tool_use_id: string; content: string | unknown; is_error?: boolean };
 
 export interface AnthropicMessage {
-  role: "user" | "assistant";
+  role: Role | "user" | "assistant";
   content: string | ContentBlock[];
 }
 
@@ -37,7 +48,7 @@ export interface AnthropicResponse {
   role: "assistant";
   model: string;
   content: ContentBlock[];
-  stop_reason: "end_turn" | "max_tokens" | "stop_sequence" | "tool_use" | null;
+  stop_reason: StopReason | "end_turn" | "max_tokens" | "stop_sequence" | "tool_use" | null;
   usage: AnthropicUsage;
 }
 
@@ -51,7 +62,20 @@ export interface NormalizedRequest {
   signal?: AbortSignal;
 }
 
-export type TierName =
+export enum TierName {
+  Groq = "groq",
+  Gemini = "gemini",
+  OpenRouter = "openrouter",
+  Cerebras = "cerebras",
+  Mistral = "mistral",
+  Nvidia = "nvidia",
+  HuggingFace = "huggingface",
+  Cloudflare = "cloudflare",
+  Cohere = "cohere",
+  Local = "local",
+}
+export type ResolvedBy =
+  | TierName
   | "groq"
   | "gemini"
   | "openrouter"
@@ -61,8 +85,8 @@ export type TierName =
   | "huggingface"
   | "cloudflare"
   | "cohere"
-  | "local";
-export type ResolvedBy = TierName | "deterministic";
+  | "local"
+  | "deterministic";
 
 export interface TierLimits {
   rpm: number;

@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
+import { TierName } from "../types";
 import {
   buildOpenAIPayload,
   createOpenAICompatibleStream,
@@ -8,7 +9,7 @@ import {
 } from "./openaiCompatible";
 
 export const localAdapter: ProviderAdapter = {
-  tier: "local",
+  tier: TierName.Local,
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return fitsOpenAICompatibleContext(estimatedTokens);
@@ -37,6 +38,13 @@ export const localAdapter: ProviderAdapter = {
     const payload = buildOpenAIPayload(req, config.local.model);
     const url = `${config.local.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
-    return createOpenAICompatibleStream(url, {}, payload, config.local.model, signal, "local");
+    return createOpenAICompatibleStream(
+      url,
+      {},
+      payload,
+      config.local.model,
+      signal,
+      TierName.Local,
+    );
   },
 };
