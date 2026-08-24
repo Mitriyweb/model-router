@@ -57,6 +57,7 @@ export type TierName =
   | "cerebras"
   | "mistral"
   | "nvidia"
+  | "huggingface"
   | "cloudflare"
   | "cohere"
   | "local";

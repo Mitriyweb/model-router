@@ -3,6 +3,7 @@ import { cloudflareAdapter } from "./adapters/cloudflare";
 import { cohereAdapter } from "./adapters/cohere";
 import { geminiAdapter } from "./adapters/gemini";
 import { groqAdapter } from "./adapters/groq";
+import { huggingfaceAdapter } from "./adapters/huggingface";
 import { localAdapter } from "./adapters/local";
 import { mistralAdapter } from "./adapters/mistral";
 import { nvidiaAdapter } from "./adapters/nvidia";
@@ -26,6 +27,7 @@ const adapters: Record<TierName, ProviderAdapter> = {
   openrouter: openrouterAdapter,
   mistral: mistralAdapter,
   nvidia: nvidiaAdapter,
+  huggingface: huggingfaceAdapter,
   cloudflare: cloudflareAdapter,
   cohere: cohereAdapter,
   local: localAdapter,
@@ -38,6 +40,7 @@ const limitsByTier: Record<TierName, { rpm: number; tpm: number; rpd: number }> 
   openrouter: config.openrouter.limits,
   mistral: config.mistral.limits,
   nvidia: config.nvidia.limits,
+  huggingface: config.huggingface.limits,
   cloudflare: config.cloudflare.limits,
   cohere: config.cohere.limits,
   local: config.local.limits,
@@ -80,6 +83,7 @@ export function planTierOrder(
       "openrouter",
       "groq",
       "nvidia",
+      "huggingface",
       "cloudflare",
       "cohere",
       "local",
@@ -220,6 +224,8 @@ function hasCredentials(tier: TierName): boolean {
       return Boolean(config.mistral.apiKey);
     case "nvidia":
       return Boolean(config.nvidia.apiKey);
+    case "huggingface":
+      return Boolean(config.huggingface.apiKey);
     case "cloudflare":
       return Boolean(config.cloudflare.apiToken && config.cloudflare.accountId);
     case "cohere":

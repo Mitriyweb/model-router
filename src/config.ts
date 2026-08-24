@@ -42,6 +42,13 @@ export interface Config {
     model: string;
     limits: TierLimits;
   };
+  huggingface: {
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+    provider: string;
+    limits: TierLimits;
+  };
   cloudflare: {
     apiToken: string;
     accountId: string;
@@ -69,6 +76,7 @@ const defaultFallbackOrder: TierName[] = [
   "openrouter",
   "mistral",
   "nvidia",
+  "huggingface",
   "cloudflare",
   "cohere",
   "local",
@@ -156,6 +164,17 @@ export const config: Config = {
       rpm: Number(process.env.NVIDIA_RPM ?? 40),
       tpm: Number(process.env.NVIDIA_TPM ?? 40_000),
       rpd: Number(process.env.NVIDIA_RPD ?? 1000),
+    },
+  },
+  huggingface: {
+    apiKey: process.env.HF_API_KEY ?? "",
+    baseUrl: process.env.HF_BASE_URL ?? "https://router.huggingface.co/v1",
+    model: process.env.HF_MODEL ?? "",
+    provider: process.env.HF_PROVIDER ?? "",
+    limits: {
+      rpm: Number(process.env.HF_RPM ?? 20),
+      tpm: Number(process.env.HF_TPM ?? 40_000),
+      rpd: Number(process.env.HF_RPD ?? 1000),
     },
   },
   cloudflare: {

@@ -319,7 +319,7 @@ export function buildOpenAIPayload(req: NormalizedRequest, model: string) {
     max_tokens: req.maxTokens,
     temperature: req.temperature,
     stream: req.stream,
-    tools: req.tools.length ? anthropicToolsToOpenAI(req.tools) : undefined,
+    tools: req.tools?.length ? anthropicToolsToOpenAI(req.tools) : undefined,
   };
 }
 
