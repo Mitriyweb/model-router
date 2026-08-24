@@ -149,7 +149,7 @@ function handleModels(): Response {
     { id: "model-router-auto", object: "model", created: 1700000000, owned_by: "model-router" },
     { id: "llama-3.3-70b", object: "model", created: 1700000000, owned_by: "cerebras" },
     { id: "llama-3.3-70b-versatile", object: "model", created: 1700000000, owned_by: "groq" },
-    { id: "gemini-3.7-flash", object: "model", created: 1700000000, owned_by: "gemini" },
+    { id: "gemini-2.5-flash", object: "model", created: 1700000000, owned_by: "gemini" },
     { id: "codestral-latest", object: "model", created: 1700000000, owned_by: "mistral" },
     { id: "mistral-large-latest", object: "model", created: 1700000000, owned_by: "mistral" },
     { id: "command-r-plus-08-2024", object: "model", created: 1700000000, owned_by: "cohere" },

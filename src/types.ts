@@ -48,6 +48,7 @@ export interface NormalizedRequest {
   maxTokens?: number;
   temperature?: number;
   stream: boolean;
+  signal?: AbortSignal;
 }
 
 export type TierName =
@@ -71,8 +72,8 @@ export interface TierLimits {
 export interface ProviderAdapter {
   tier: TierName;
   canHandle(req: NormalizedRequest, estimatedTokens: number): boolean;
-  send(req: NormalizedRequest): Promise<AnthropicResponse>;
-  sendStream?(req: NormalizedRequest): ReadableStream<Uint8Array>;
+  send(req: NormalizedRequest, opts?: { signal?: AbortSignal }): Promise<AnthropicResponse>;
+  sendStream?(req: NormalizedRequest, opts?: { signal?: AbortSignal }): ReadableStream<Uint8Array>;
 }
 
 export type PolicyStrategy =

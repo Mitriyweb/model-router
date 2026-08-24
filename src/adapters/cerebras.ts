@@ -16,9 +16,10 @@ export const cerebrasAdapter: ProviderAdapter = {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.cerebras.model);
     const url = `${config.cerebras.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -26,6 +27,7 @@ export const cerebrasAdapter: ProviderAdapter = {
         Authorization: `Bearer ${config.cerebras.apiKey}`,
       },
       body: JSON.stringify({ ...payload, stream: false }),
+      signal,
     });
 
     if (!res.ok) {
@@ -37,15 +39,16 @@ export const cerebrasAdapter: ProviderAdapter = {
     return openAIResponseToAnthropic(data, config.cerebras.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.cerebras.model);
     const url = `${config.cerebras.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.cerebras.apiKey}` },
       payload,
       config.cerebras.model,
-      undefined,
+      signal,
       "cerebras",
     );
   },

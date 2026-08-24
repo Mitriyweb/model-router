@@ -16,9 +16,10 @@ export const cloudflareAdapter: ProviderAdapter = {
     return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.cloudflare.model);
     const url = `${config.cloudflare.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -26,6 +27,7 @@ export const cloudflareAdapter: ProviderAdapter = {
         Authorization: `Bearer ${config.cloudflare.apiToken}`,
       },
       body: JSON.stringify({ ...payload, stream: false }),
+      signal,
     });
 
     if (!res.ok) {
@@ -37,15 +39,16 @@ export const cloudflareAdapter: ProviderAdapter = {
     return openAIResponseToAnthropic(data, config.cloudflare.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.cloudflare.model);
     const url = `${config.cloudflare.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.cloudflare.apiToken}` },
       payload,
       config.cloudflare.model,
-      undefined,
+      signal,
       "cloudflare",
     );
   },

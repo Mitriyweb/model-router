@@ -42,8 +42,10 @@ async function readStreamToString(stream: ReadableStream<Uint8Array>): Promise<s
 }
 
 async function testAdapter(adapter: ProviderAdapter) {
+  const signal = AbortSignal.timeout(25_000);
+
   // Test unary send
-  const res = await adapter.send(minimalReq);
+  const res = await adapter.send(minimalReq, { signal });
   expect(res).toBeDefined();
   expect(res.id).toBeString();
   expect(res.role).toBe("assistant");
@@ -53,10 +55,13 @@ async function testAdapter(adapter: ProviderAdapter) {
 
   // Test streaming sendStream
   if (adapter.sendStream) {
-    const stream = adapter.sendStream({ ...minimalReq, stream: true });
+    const streamSignal = AbortSignal.timeout(25_000);
+    const stream = adapter.sendStream({ ...minimalReq, stream: true }, { signal: streamSignal });
     const rawStreamOutput = await readStreamToString(stream);
     expect(rawStreamOutput).toBeString();
     expect(rawStreamOutput.length).toBeGreaterThan(0);
+    expect(rawStreamOutput).not.toContain('"type": "error"');
+    expect(rawStreamOutput).not.toContain('"type":"error"');
   }
 }
 

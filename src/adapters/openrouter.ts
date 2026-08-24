@@ -16,9 +16,10 @@ export const openrouterAdapter: ProviderAdapter = {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.openrouter.model);
     const url = `${config.openrouter.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -28,6 +29,7 @@ export const openrouterAdapter: ProviderAdapter = {
         "X-Title": "model-router",
       },
       body: JSON.stringify({ ...payload, stream: false }),
+      signal,
     });
 
     if (!res.ok) {
@@ -39,9 +41,10 @@ export const openrouterAdapter: ProviderAdapter = {
     return openAIResponseToAnthropic(data, config.openrouter.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.openrouter.model);
     const url = `${config.openrouter.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       {
@@ -51,7 +54,7 @@ export const openrouterAdapter: ProviderAdapter = {
       },
       payload,
       config.openrouter.model,
-      undefined,
+      signal,
       "openrouter",
     );
   },

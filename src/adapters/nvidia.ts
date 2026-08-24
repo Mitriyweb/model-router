@@ -16,9 +16,10 @@ export const nvidiaAdapter: ProviderAdapter = {
     return fitsOpenAICompatibleContext(estimatedTokens);
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.nvidia.model);
     const url = `${config.nvidia.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -26,6 +27,7 @@ export const nvidiaAdapter: ProviderAdapter = {
         Authorization: `Bearer ${config.nvidia.apiKey}`,
       },
       body: JSON.stringify({ ...payload, stream: false }),
+      signal,
     });
 
     if (!res.ok) {
@@ -37,15 +39,16 @@ export const nvidiaAdapter: ProviderAdapter = {
     return openAIResponseToAnthropic(data, config.nvidia.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildOpenAIPayload(req, config.nvidia.model);
     const url = `${config.nvidia.baseUrl}/chat/completions`;
+    const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.nvidia.apiKey}` },
       payload,
       config.nvidia.model,
-      undefined,
+      signal,
       "nvidia",
     );
   },

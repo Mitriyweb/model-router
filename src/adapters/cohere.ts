@@ -104,9 +104,10 @@ export const cohereAdapter: ProviderAdapter = {
     return estimatedTokens <= config.routerMaxContextTokens;
   },
 
-  async send(req: NormalizedRequest) {
+  async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildCoherePayload(req, config.cohere.model, false);
     const url = `${config.cohere.baseUrl}/chat`;
+    const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -114,6 +115,7 @@ export const cohereAdapter: ProviderAdapter = {
         Authorization: `Bearer ${config.cohere.apiKey}`,
       },
       body: JSON.stringify(payload),
+      signal,
     });
 
     if (!res.ok) {
@@ -125,9 +127,10 @@ export const cohereAdapter: ProviderAdapter = {
     return cohereResponseToAnthropic(data, config.cohere.model);
   },
 
-  sendStream(req: NormalizedRequest) {
+  sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const payload = buildCoherePayload(req, config.cohere.model, true);
     const url = `${config.cohere.baseUrl}/chat`;
+    const signal = opts?.signal ?? req.signal;
 
     return new ReadableStream({
       async start(controller) {
@@ -142,6 +145,7 @@ export const cohereAdapter: ProviderAdapter = {
               Authorization: `Bearer ${config.cohere.apiKey}`,
             },
             body: JSON.stringify(payload),
+            signal,
           });
 
           if (!res.ok || !res.body) {
