@@ -1,0 +1,22 @@
+{
+  "name": "mini-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A small modular coding agent harness compatible with model-router.",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "start.js",
+  "bin": {
+    "mini-agent": "./start.js"
+  },
+  "scripts": {
+    "start": "node start.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "concolor": "^1.1.4",
+    "metautil": "^5.5.2",
+    "openai": "^4.86.0"
+  }
+}

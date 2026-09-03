@@ -116,6 +116,16 @@ aider --model openai/model-router-auto
 
 ---
 
+### 6. Mini Agent (`mini-agent`)
+
+Standalone coding agent harness included in `mini-agent/`:
+
+```bash
+node mini-agent/start.js -y "Inspect package.json and summarize the project"
+```
+
+---
+
 ## SSE Streaming (Server-Sent Events)
 
 `model-router` supports real-time Server-Sent Events (SSE) streaming for both OpenAI and Anthropic formats.
