@@ -32,6 +32,9 @@
   "dependencies": {
     "gpt-tokenizer": "^2.9.0"
   },
+  "workspaces": [
+    "mini-agent"
+  ],
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "^1.2.4",
