@@ -2,7 +2,6 @@ import { config } from "../config";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
 import type { AnthropicResponse, ContentBlock, NormalizedRequest, ProviderAdapter } from "../types";
-import { TierName } from "../types";
 import { ProviderError, readProviderError } from "./openaiCompatible";
 
 function buildToolIdToNameMap(req: NormalizedRequest): Map<string, string> {
@@ -194,7 +193,7 @@ function geminiResponseToAnthropic(data: any): AnthropicResponse {
 }
 
 export const geminiAdapter: ProviderAdapter = {
-  tier: TierName.Gemini,
+  tier: "gemini",
 
   canHandle() {
     return true;
@@ -230,7 +229,7 @@ export const geminiAdapter: ProviderAdapter = {
             const err = new ProviderError(errMsg, res.status, res.headers);
             const retryMs = retryAfterFromError(err);
             if (retryMs !== undefined) {
-              rateLimiter.markUnavailable(TierName.Gemini, retryMs);
+              rateLimiter.markUnavailable("gemini", retryMs);
             }
             writer.error(errMsg);
             return;
@@ -297,7 +296,7 @@ export const geminiAdapter: ProviderAdapter = {
         } catch (err: any) {
           const retryMs = retryAfterFromError(err);
           if (retryMs !== undefined) {
-            rateLimiter.markUnavailable(TierName.Gemini, retryMs);
+            rateLimiter.markUnavailable("gemini", retryMs);
           }
           writer.error(err.message ?? String(err));
         }

@@ -3,7 +3,6 @@ import { huggingfaceAdapter } from "../../src/adapters/huggingface";
 import { config } from "../../src/config";
 import { rateLimiter } from "../../src/rateLimiter";
 import { routeRequest } from "../../src/router";
-import { TierName } from "../../src/types";
 import type { NormalizedRequest } from "../../src/types";
 
 // ---------------------------------------------------------------------------
@@ -141,7 +140,7 @@ describe("Hugging Face Adapter — authentication", () => {
 
     const originalFallback = [...config.fallbackOrder];
     const originalHasCustom = config.hasCustomFallbackOrder;
-    config.fallbackOrder = [TierName.HuggingFace];
+    config.fallbackOrder = ["huggingface"];
     config.hasCustomFallbackOrder = true;
 
     try {
@@ -265,7 +264,7 @@ describe("Hugging Face Adapter — context overflow (router level)", () => {
     const originalTpm = config.huggingface.limits.tpm;
 
     config.huggingface.limits.tpm = 50;
-    config.fallbackOrder = [TierName.HuggingFace];
+    config.fallbackOrder = ["huggingface"];
     config.hasCustomFallbackOrder = true;
     rateLimiter.reset();
 
@@ -297,7 +296,7 @@ describe("Hugging Face Adapter — timeout / network error", () => {
 
     const originalFallback = [...config.fallbackOrder];
     const originalHasCustom = config.hasCustomFallbackOrder;
-    config.fallbackOrder = [TierName.HuggingFace];
+    config.fallbackOrder = ["huggingface"];
     config.hasCustomFallbackOrder = true;
     rateLimiter.reset();
 

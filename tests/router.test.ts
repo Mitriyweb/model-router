@@ -10,7 +10,6 @@ import { rateLimiter } from "../src/rateLimiter";
 import { estimateTokens, planTierOrder, routeRequest, routeRequestStream } from "../src/router";
 import { startServer } from "../src/server";
 import type { NormalizedRequest } from "../src/types";
-import { TierName } from "../src/types";
 
 describe("router", () => {
   it("estimates token counts consistently", () => {
@@ -36,15 +35,15 @@ describe("router", () => {
     const originalFallback = [...config.fallbackOrder];
     const originalHasCustom = config.hasCustomFallbackOrder;
     config.fallbackOrder = [
-      TierName.Cerebras,
-      TierName.Groq,
-      TierName.Gemini,
-      TierName.OpenRouter,
-      TierName.Mistral,
-      TierName.Nvidia,
-      TierName.Cloudflare,
-      TierName.Cohere,
-      TierName.Local,
+      "cerebras",
+      "groq",
+      "gemini",
+      "openrouter",
+      "mistral",
+      "nvidia",
+      "cloudflare",
+      "cohere",
+      "local",
     ];
     config.hasCustomFallbackOrder = false;
 
@@ -53,10 +52,10 @@ describe("router", () => {
 
       // Large context (>4000 tokens) prefers Gemini first
       const largePlan = planTierOrder(smallReq, 5000);
-      expect(largePlan[0]).toBe(TierName.Gemini);
+      expect(largePlan[0]).toBe("gemini");
 
       // Force private stays completely local
-      expect(planTierOrder(smallReq, 50, { forcePrivate: true })).toEqual([TierName.Local]);
+      expect(planTierOrder(smallReq, 50, { forcePrivate: true })).toEqual(["local"]);
     } finally {
       config.fallbackOrder = originalFallback;
       config.hasCustomFallbackOrder = originalHasCustom;
@@ -73,15 +72,11 @@ describe("router", () => {
 
     const originalFallback = [...config.fallbackOrder];
     const originalHasCustom = config.hasCustomFallbackOrder;
-    config.fallbackOrder = [TierName.Gemini, TierName.OpenRouter, TierName.Mistral];
+    config.fallbackOrder = ["gemini", "openrouter", "mistral"];
     config.hasCustomFallbackOrder = true;
 
     try {
-      expect(planTierOrder(req, 5000)).toEqual([
-        TierName.Gemini,
-        TierName.OpenRouter,
-        TierName.Mistral,
-      ]);
+      expect(planTierOrder(req, 5000)).toEqual(["gemini", "openrouter", "mistral"]);
     } finally {
       config.fallbackOrder = originalFallback;
       config.hasCustomFallbackOrder = originalHasCustom;
@@ -114,7 +109,7 @@ describe("router", () => {
 
     config.groq.apiKey = "test-key";
     config.groq.limits.tpm = 50;
-    config.fallbackOrder = [TierName.Groq];
+    config.fallbackOrder = ["groq"];
     config.hasCustomFallbackOrder = true;
 
     try {
@@ -145,7 +140,7 @@ describe("router", () => {
 
     config.cerebras.apiKey = "test-cerebras-key";
     config.cerebras.limits.tpm = 8000;
-    config.fallbackOrder = [TierName.Cerebras];
+    config.fallbackOrder = ["cerebras"];
     config.hasCustomFallbackOrder = true;
 
     const fetchMock = mock(
@@ -170,7 +165,7 @@ describe("router", () => {
 
     try {
       const result = await routeRequest(req);
-      expect(result.tierUsed).toBe(TierName.Cerebras);
+      expect(result.tierUsed).toBe("cerebras");
     } finally {
       globalThis.fetch = originalFetch;
       config.cerebras.apiKey = originalApiKey;
@@ -199,7 +194,7 @@ describe("router", () => {
 
     config.cerebras.apiKey = "test-cerebras-key";
     config.cerebras.limits.tpm = 8000;
-    config.fallbackOrder = [TierName.Cerebras];
+    config.fallbackOrder = ["cerebras"];
     config.hasCustomFallbackOrder = true;
 
     const streamResponse = new ReadableStream({
@@ -223,7 +218,7 @@ describe("router", () => {
 
     try {
       const result = await routeRequestStream(req);
-      expect(result.tierUsed).toBe(TierName.Cerebras);
+      expect(result.tierUsed).toBe("cerebras");
     } finally {
       globalThis.fetch = originalFetch;
       config.cerebras.apiKey = originalApiKey;
@@ -262,7 +257,7 @@ describe("router", () => {
     await rateLimiter.reset();
     config.groq.apiKey = "test-key";
     config.groq.baseUrl = "https://example.invalid";
-    config.fallbackOrder = [TierName.Groq];
+    config.fallbackOrder = ["groq"];
     config.hasCustomFallbackOrder = false;
 
     const fetchMock = mock(
@@ -287,7 +282,7 @@ describe("router", () => {
 
     try {
       await expect(routeRequest(req)).rejects.toThrow("All tiers exhausted or unavailable");
-      expect(rateLimiter.canServe(TierName.Groq, config.groq.limits, 1000)).toBe(false);
+      expect(rateLimiter.canServe("groq", config.groq.limits, 1000)).toBe(false);
     } finally {
       globalThis.fetch = originalFetch;
       config.groq.apiKey = originalApiKey;
@@ -388,7 +383,7 @@ describe("router", () => {
 
     await rateLimiter.reset();
     config.gemini.apiKey = "test-key";
-    config.fallbackOrder = [TierName.Gemini];
+    config.fallbackOrder = ["gemini"];
 
     const fetchMock = mock(
       async () =>
@@ -411,7 +406,7 @@ describe("router", () => {
 
     try {
       await expect(routeRequest(req)).rejects.toThrow("All tiers exhausted or unavailable");
-      expect(rateLimiter.canServe(TierName.Gemini, config.gemini.limits, 100)).toBe(false);
+      expect(rateLimiter.canServe("gemini", config.gemini.limits, 100)).toBe(false);
     } finally {
       globalThis.fetch = originalFetch;
       config.gemini.apiKey = originalApiKey;

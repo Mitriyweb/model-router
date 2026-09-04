@@ -3,8 +3,7 @@ import { config } from "./config";
 import { rateLimiter } from "./rateLimiter";
 import { routeRequest, routeRequestStream } from "./router";
 import { anthropicStreamToOpenAI } from "./streaming/openaiSSE";
-import type { AnthropicRequest, NormalizedRequest } from "./types";
-import { TierName } from "./types";
+import type { AnthropicRequest, NormalizedRequest, TierName } from "./types";
 
 function normalize(req: AnthropicRequest): NormalizedRequest {
   const systemPrompt =
@@ -76,15 +75,15 @@ function parseModelTierOverride(modelName?: string): { tier?: TierName; cleanMod
   if (!modelName) return { cleanModel: "model-router-auto" };
 
   const validTiers: TierName[] = [
-    TierName.Cerebras,
-    TierName.Groq,
-    TierName.Gemini,
-    TierName.OpenRouter,
-    TierName.Mistral,
-    TierName.Nvidia,
-    TierName.Cloudflare,
-    TierName.Cohere,
-    TierName.Local,
+    "cerebras",
+    "groq",
+    "gemini",
+    "openrouter",
+    "mistral",
+    "nvidia",
+    "cloudflare",
+    "cohere",
+    "local",
   ];
 
   for (const tier of validTiers) {
@@ -161,16 +160,16 @@ function handleModels(): Response {
 
 function handleStatus(): Response {
   const tiers = [
-    TierName.Cerebras,
-    TierName.Groq,
-    TierName.Gemini,
-    TierName.OpenRouter,
-    TierName.Mistral,
-    TierName.Nvidia,
-    TierName.Cloudflare,
-    TierName.Cohere,
-    TierName.Local,
-  ];
+    "cerebras",
+    "groq",
+    "gemini",
+    "openrouter",
+    "mistral",
+    "nvidia",
+    "cloudflare",
+    "cohere",
+    "local",
+  ] as const;
   const snapshot = Object.fromEntries(
     tiers.map((t) => [t, rateLimiter.snapshot(t, config[t].limits)]),
   );

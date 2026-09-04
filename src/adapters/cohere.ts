@@ -2,7 +2,6 @@ import { config } from "../config";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
 import type { AnthropicResponse, ContentBlock, NormalizedRequest, ProviderAdapter } from "../types";
-import { TierName } from "../types";
 import { ProviderError, anthropicToolsToOpenAI, safeJsonParse } from "./openaiCompatible";
 
 function buildCoherePayload(req: NormalizedRequest, model: string, stream = false) {
@@ -99,7 +98,7 @@ function cohereResponseToAnthropic(data: any, model: string): AnthropicResponse 
 }
 
 export const cohereAdapter: ProviderAdapter = {
-  tier: TierName.Cohere,
+  tier: "cohere",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return estimatedTokens <= config.routerMaxContextTokens;
@@ -158,7 +157,7 @@ export const cohereAdapter: ProviderAdapter = {
             );
             const retryMs = retryAfterFromError(err);
             if (retryMs !== undefined) {
-              rateLimiter.markUnavailable(TierName.Cohere, retryMs);
+              rateLimiter.markUnavailable("cohere", retryMs);
             }
             writer.error(`Cohere error ${res.status}: ${rawText}`);
             return;
@@ -232,7 +231,7 @@ export const cohereAdapter: ProviderAdapter = {
         } catch (err: any) {
           const retryMs = retryAfterFromError(err);
           if (retryMs !== undefined) {
-            rateLimiter.markUnavailable(TierName.Cohere, retryMs);
+            rateLimiter.markUnavailable("cohere", retryMs);
           }
           writer.error(err.message ?? String(err));
         }

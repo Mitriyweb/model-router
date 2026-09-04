@@ -18,33 +18,32 @@ import { resolvers } from "./resolvers";
 import { AnthropicSSEWriter } from "./streaming/anthropicSSE";
 import { reconstructingStream } from "./streaming/reconstruct";
 import { countTokens } from "./tokenizer";
-import type { NormalizedRequest, ProviderAdapter, ResolvedBy } from "./types";
-import { TierName } from "./types";
+import type { NormalizedRequest, ProviderAdapter, ResolvedBy, TierName } from "./types";
 
 const adapters: Record<TierName, ProviderAdapter> = {
-  [TierName.Cerebras]: cerebrasAdapter,
-  [TierName.Groq]: groqAdapter,
-  [TierName.Gemini]: geminiAdapter,
-  [TierName.OpenRouter]: openrouterAdapter,
-  [TierName.Mistral]: mistralAdapter,
-  [TierName.Nvidia]: nvidiaAdapter,
-  [TierName.HuggingFace]: huggingfaceAdapter,
-  [TierName.Cloudflare]: cloudflareAdapter,
-  [TierName.Cohere]: cohereAdapter,
-  [TierName.Local]: localAdapter,
+  cerebras: cerebrasAdapter,
+  groq: groqAdapter,
+  gemini: geminiAdapter,
+  openrouter: openrouterAdapter,
+  mistral: mistralAdapter,
+  nvidia: nvidiaAdapter,
+  huggingface: huggingfaceAdapter,
+  cloudflare: cloudflareAdapter,
+  cohere: cohereAdapter,
+  local: localAdapter,
 };
 
 const limitsByTier: Record<TierName, { rpm: number; tpm: number; rpd: number }> = {
-  [TierName.Cerebras]: config.cerebras.limits,
-  [TierName.Groq]: config.groq.limits,
-  [TierName.Gemini]: config.gemini.limits,
-  [TierName.OpenRouter]: config.openrouter.limits,
-  [TierName.Mistral]: config.mistral.limits,
-  [TierName.Nvidia]: config.nvidia.limits,
-  [TierName.HuggingFace]: config.huggingface.limits,
-  [TierName.Cloudflare]: config.cloudflare.limits,
-  [TierName.Cohere]: config.cohere.limits,
-  [TierName.Local]: config.local.limits,
+  cerebras: config.cerebras.limits,
+  groq: config.groq.limits,
+  gemini: config.gemini.limits,
+  openrouter: config.openrouter.limits,
+  mistral: config.mistral.limits,
+  nvidia: config.nvidia.limits,
+  huggingface: config.huggingface.limits,
+  cloudflare: config.cloudflare.limits,
+  cohere: config.cohere.limits,
+  local: config.local.limits,
 };
 
 /** Token estimate via cl100k_base tokenizer. */
@@ -70,7 +69,7 @@ export function planTierOrder(
   estimatedInputTokens: number,
   opts?: { forcePrivate?: boolean },
 ): TierName[] {
-  if (opts?.forcePrivate) return [TierName.Local];
+  if (opts?.forcePrivate) return ["local"];
 
   let baseOrder: TierName[];
 
@@ -78,16 +77,16 @@ export function planTierOrder(
     baseOrder = [...config.fallbackOrder];
   } else if (estimatedInputTokens > 4000) {
     baseOrder = [
-      TierName.Gemini,
-      TierName.Mistral,
-      TierName.Cerebras,
-      TierName.OpenRouter,
-      TierName.Groq,
-      TierName.Nvidia,
-      TierName.HuggingFace,
-      TierName.Cloudflare,
-      TierName.Cohere,
-      TierName.Local,
+      "gemini",
+      "mistral",
+      "cerebras",
+      "openrouter",
+      "groq",
+      "nvidia",
+      "huggingface",
+      "cloudflare",
+      "cohere",
+      "local",
     ];
   } else {
     baseOrder = [...config.fallbackOrder];
@@ -135,7 +134,7 @@ export async function routeRequest(
     const forcedTier = rule.strategy.tier;
     order = [forcedTier, ...order.filter((t) => t !== forcedTier)];
   } else if (rule?.strategy.kind === "local") {
-    order = [TierName.Local, ...order.filter((t) => t !== TierName.Local)];
+    order = ["local", ...order.filter((t) => t !== "local")];
   }
 
   const attempts: RouteResult["attempts"] = [];
@@ -213,25 +212,25 @@ export async function routeRequest(
 
 function hasCredentials(tier: TierName): boolean {
   switch (tier) {
-    case TierName.Cerebras:
+    case "cerebras":
       return Boolean(config.cerebras.apiKey);
-    case TierName.Groq:
+    case "groq":
       return Boolean(config.groq.apiKey);
-    case TierName.Gemini:
+    case "gemini":
       return Boolean(config.gemini.apiKey);
-    case TierName.OpenRouter:
+    case "openrouter":
       return Boolean(config.openrouter.apiKey);
-    case TierName.Mistral:
+    case "mistral":
       return Boolean(config.mistral.apiKey);
-    case TierName.Nvidia:
+    case "nvidia":
       return Boolean(config.nvidia.apiKey);
-    case TierName.HuggingFace:
+    case "huggingface":
       return Boolean(config.huggingface.apiKey);
-    case TierName.Cloudflare:
+    case "cloudflare":
       return Boolean(config.cloudflare.apiToken && config.cloudflare.accountId);
-    case TierName.Cohere:
+    case "cohere":
       return Boolean(config.cohere.apiKey);
-    case TierName.Local:
+    case "local":
       return true;
   }
 }
@@ -272,7 +271,7 @@ export async function routeRequestStream(
     const forcedTier = rule.strategy.tier;
     order = [forcedTier, ...order.filter((t) => t !== forcedTier)];
   } else if (rule?.strategy.kind === "local") {
-    order = [TierName.Local, ...order.filter((t) => t !== TierName.Local)];
+    order = ["local", ...order.filter((t) => t !== "local")];
   }
 
   for (const tier of order) {

@@ -1,6 +1,5 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
-import { TierName } from "../types";
 import {
   ProviderError,
   buildOpenAIPayload,
@@ -11,7 +10,7 @@ import {
 } from "./openaiCompatible";
 
 export const cloudflareAdapter: ProviderAdapter = {
-  tier: TierName.Cloudflare,
+  tier: "cloudflare",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return fitsOpenAICompatibleContext(estimatedTokens);
@@ -50,7 +49,7 @@ export const cloudflareAdapter: ProviderAdapter = {
       payload,
       config.cloudflare.model,
       signal,
-      TierName.Cloudflare,
+      "cloudflare",
     );
   },
 };

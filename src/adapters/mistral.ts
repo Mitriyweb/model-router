@@ -1,6 +1,5 @@
 import { config } from "../config";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
-import { TierName } from "../types";
 import {
   ProviderError,
   buildOpenAIPayload,
@@ -11,7 +10,7 @@ import {
 } from "./openaiCompatible";
 
 export const mistralAdapter: ProviderAdapter = {
-  tier: TierName.Mistral,
+  tier: "mistral",
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
@@ -50,7 +49,7 @@ export const mistralAdapter: ProviderAdapter = {
       payload,
       config.mistral.model,
       signal,
-      TierName.Mistral,
+      "mistral",
     );
   },
 };
