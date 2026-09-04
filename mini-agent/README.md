@@ -2,8 +2,6 @@
 
 A lightweight, modular coding agent harness compatible with **`model-router`** (or any OpenAI-compatible Chat Completions API).
 
-Separated and adapted from [HowProgrammingWorks/Agent](https://github.com/HowProgrammingWorks/Agent).
-
 ---
 
 ## Features
