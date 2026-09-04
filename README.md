@@ -116,9 +116,9 @@ aider --model openai/model-router-auto
 
 ---
 
-### 6. Mini Agent (`mini-agent`)
+### 6. Mini Agent
 
-Standalone coding agent harness included in `mini-agent/`:
+[Mini Agent](https://github.com/Mitriyweb/mini-agent) is a standalone coding agent harness included in `mini-agent/`:
 
 ```bash
 node mini-agent/start.js -y "Inspect package.json and summarize the project"
