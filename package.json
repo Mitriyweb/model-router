@@ -23,7 +23,8 @@
     "test": "bun test",
     "test:e2e": "RUN_E2E=true bun test tests/e2e",
     "validate": "bun run typecheck && bun run lint && bun test",
-    "precommit": "bun run validate",
+    "verify": "bun run validate && bun run build",
+    "precommit": "bun run verify",
     "prepare": "which simple-git-hooks > /dev/null 2>&1 && simple-git-hooks || true"
   },
   "simple-git-hooks": {

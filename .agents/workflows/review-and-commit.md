@@ -36,11 +36,10 @@ If critical or high issues are found -> fix them before proceeding.
 ### Run Validation Pipeline
 
 ```bash
-bun run validate
-bun run build
+bun run verify
 ```
 
-This runs the full project validation chain:
+This runs the full project validation chain in one command:
 1. `tsc --noEmit` (TypeScript typecheck)
 2. `biome check src/ tests/` (Biome linting & formatting)
 3. `bun test` (Unit test suite across router, rateLimiter, cache, streaming)
@@ -93,7 +92,7 @@ Verify:
 git commit -m "type: description"
 ```
 
-**NEVER** use `--no-verify` or `-n` — the pre-commit hook (`bun run validate`) MUST run.
+**NEVER** use `--no-verify` or `-n` — the pre-commit hook (`bun run verify`) MUST run.
 
 ### Handle Hook / Check Failures
 
@@ -130,7 +129,7 @@ Issues: [count critical] / [count high] / [count medium]
 ## Key Rules
 
 1. **Never `--no-verify`** — pre-commit hook must always run.
-2. **All checks pass** before commit (`bun run validate && bun run build`).
+2. **All checks pass** before commit (`bun run verify`).
 3. **Use `bun run`** — never `npm` / `yarn` / `pnpm`.
 4. **Conventional commits** — `type: description` format.
 5. **New commits only** — never amend unless explicitly requested.
