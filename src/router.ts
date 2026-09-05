@@ -151,9 +151,10 @@ export async function routeRequest(
     }
     let effectiveReq = req;
     let effectiveTokens = estimated;
+    const requestedOutputTokens = req.maxTokens ?? 0;
     const targetLimit =
       limits.tpm > 0
-        ? Math.min(limits.tpm, config.routerMaxContextTokens)
+        ? Math.min(Math.max(limits.tpm - requestedOutputTokens, 1), config.routerMaxContextTokens)
         : config.routerMaxContextTokens;
 
     if (estimated > targetLimit) {
@@ -161,13 +162,14 @@ export async function routeRequest(
       effectiveTokens = estimateTokens(effectiveReq);
     }
 
-    if (limits.tpm > 0 && effectiveTokens > limits.tpm) {
+    const effectiveBudgetTokens = effectiveTokens + requestedOutputTokens;
+    if (limits.tpm > 0 && effectiveBudgetTokens > limits.tpm) {
       console.warn(
-        `[router] skip ${tier}: effective request size (${effectiveTokens} tokens) exceeds TPM limit (${limits.tpm})`,
+        `[router] skip ${tier}: effective request budget (${effectiveBudgetTokens} tokens) exceeds TPM limit (${limits.tpm})`,
       );
       attempts.push({
         tier,
-        skipped: `effective request size (${effectiveTokens} tokens) exceeds TPM limit (${limits.tpm})`,
+        skipped: `effective request budget (${effectiveBudgetTokens} tokens) exceeds TPM limit (${limits.tpm})`,
       });
       continue;
     }
@@ -177,7 +179,7 @@ export async function routeRequest(
       attempts.push({ tier, skipped: "request doesn't fit this tier (context/size)" });
       continue;
     }
-    if (!rateLimiter.canServe(tier, limits, effectiveTokens)) {
+    if (!rateLimiter.canServe(tier, limits, effectiveBudgetTokens)) {
       console.warn(`[router] skip ${tier}: rate limit reached`);
       attempts.push({ tier, skipped: "rate limit reached" });
       continue;
@@ -281,9 +283,10 @@ export async function routeRequestStream(
     if (!adapter.sendStream) continue;
     let effectiveReq = req;
     let effectiveTokens = estimated;
+    const requestedOutputTokens = req.maxTokens ?? 0;
     const targetLimit =
       limits.tpm > 0
-        ? Math.min(limits.tpm, config.routerMaxContextTokens)
+        ? Math.min(Math.max(limits.tpm - requestedOutputTokens, 1), config.routerMaxContextTokens)
         : config.routerMaxContextTokens;
 
     if (estimated > targetLimit) {
@@ -291,17 +294,18 @@ export async function routeRequestStream(
       effectiveTokens = estimateTokens(effectiveReq);
     }
 
-    if (limits.tpm > 0 && effectiveTokens > limits.tpm) {
+    const effectiveBudgetTokens = effectiveTokens + requestedOutputTokens;
+    if (limits.tpm > 0 && effectiveBudgetTokens > limits.tpm) {
       console.warn(
-        `[router] skip streaming ${tier}: effective request size (${effectiveTokens} tokens) exceeds TPM limit (${limits.tpm})`,
+        `[router] skip streaming ${tier}: effective request budget (${effectiveBudgetTokens} tokens) exceeds TPM limit (${limits.tpm})`,
       );
       continue;
     }
 
     if (!adapter.canHandle(effectiveReq, effectiveTokens)) continue;
-    if (!rateLimiter.canServe(tier, limits, effectiveTokens)) continue;
+    if (!rateLimiter.canServe(tier, limits, effectiveBudgetTokens)) continue;
 
-    rateLimiter.record(tier, effectiveTokens);
+    rateLimiter.record(tier, effectiveBudgetTokens);
 
     if (effectiveTokens < estimated) {
       console.log(

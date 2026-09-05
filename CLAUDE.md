@@ -1,6 +1,6 @@
 # model-router
 
-Universal AI proxy that routes Claude Code, Agent Team, ZeroClaw, Aider, Cline, and any OpenAI-compatible client through **9 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
+Universal AI proxy that routes Claude Code, Agent Team, ZeroClaw, Aider, Cline, mini-agent, and any OpenAI-compatible client through **9 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
 
 ## Key Features
 
@@ -101,7 +101,7 @@ export ANTHROPIC_API_KEY=dummy
 agent-team run --all
 ```
 
-### ZeroClaw / Aider / Cline / Cursor (OpenAI API)
+### ZeroClaw / Aider / Cline / Cursor / mini-agent (OpenAI API)
 ```bash
 export OPENAI_BASE_URL="http://localhost:8787/v1"
 export OPENAI_API_KEY="dummy"

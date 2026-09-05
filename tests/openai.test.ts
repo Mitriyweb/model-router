@@ -4,12 +4,27 @@ import {
   anthropicToolsToOpenAI,
   openAIRequestToNormalized,
   openAIResponseToAnthropic,
+  readProviderError,
 } from "../src/adapters/openaiCompatible";
 import { AnthropicSSEWriter } from "../src/streaming/anthropicSSE";
 import { anthropicStreamToOpenAI } from "../src/streaming/openaiSSE";
 import type { AnthropicResponse } from "../src/types";
 
 describe("OpenAI compatibility and streaming", () => {
+  it("summarizes HTML block pages from upstream providers", async () => {
+    const response = new Response(
+      '<!doctype html><html><head><title>Attention Required! | Cloudflare</title></head><body><span data-translate="unable_to_access">You are unable to access</span> api.cloudflare.com</body></html>',
+      {
+        status: 403,
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+      },
+    );
+
+    await expect(readProviderError(response, "Cloudflare AI", "@cf/example/model")).resolves.toBe(
+      'Cloudflare AI request was blocked upstream for model "@cf/example/model" (HTTP 403): Attention Required! | Cloudflare; unable to access api.cloudflare.com',
+    );
+  });
+
   it("normalizes OpenAI request payload", () => {
     const openAIReq = {
       model: "gpt-4o",

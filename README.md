@@ -1,6 +1,6 @@
 # model-router
 
-Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, and custom Chat UIs to run on **10 free-tier and local LLM providers** instead of expensive paid APIs.
+Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, **mini-agent**, and custom Chat UIs to run on **10 free-tier and local LLM providers** instead of expensive paid APIs.
 
 ## Supported Providers
 
@@ -24,7 +24,7 @@ Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **
 `model-router` simultaneously exposes two standard APIs on port `8787`:
 
 1. **Anthropic API** (`POST /v1/messages`): For Claude Code, Agent Team, and Anthropic clients.
-2. **OpenAI API** (`POST /v1/chat/completions` & `GET /v1/models`): For ZeroClaw, Aider, Cline, Roo Code, Cursor, Continue.dev, and Web Chat interfaces.
+2. **OpenAI API** (`POST /v1/chat/completions` & `GET /v1/models`): For ZeroClaw, Aider, Cline, Roo Code, Cursor, Continue.dev, mini-agent, and Web Chat interfaces.
 
 ---
 
@@ -116,13 +116,30 @@ aider --model openai/model-router-auto
 
 ---
 
+### 6. mini-agent
+
+[mini-agent](https://github.com/Mitriyweb/mini-agent) is a lightweight coding agent harness that uses the OpenAI Chat Completions API:
+
+```bash
+git clone https://github.com/Mitriyweb/mini-agent.git
+cd mini-agent
+bun install
+export OPENAI_BASE_URL="http://localhost:8787/v1"
+export OPENAI_API_KEY="dummy"
+bun run start -- -y "Check package.json and describe the project"
+```
+
+The default model is `model-router-auto`. Use `bun run start` without a task for interactive REPL mode.
+
+---
+
 ## SSE Streaming (Server-Sent Events)
 
 `model-router` supports real-time Server-Sent Events (SSE) streaming for both OpenAI and Anthropic formats.
 
 ### A. OpenAI SSE Stream (`/v1/chat/completions`)
 
-Used by ZeroClaw, Aider, LangChain, and Web Chat UIs.
+Used by ZeroClaw, Aider, mini-agent, LangChain, and Web Chat UIs.
 
 #### 1. CLI with `curl`:
 ```bash

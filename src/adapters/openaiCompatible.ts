@@ -33,6 +33,23 @@ export async function readProviderError(
     raw = "";
   }
 
+  const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+  const looksLikeHtml =
+    contentType.includes("text/html") || /<\s*!doctype\s+html|<\s*html\b/i.test(raw);
+  if (looksLikeHtml) {
+    const title = raw.match(/<title[^>]*>\s*([^<]+?)\s*<\/title>/i)?.[1]?.trim();
+    const target = raw
+      .match(/data-translate=["']unable_to_access["'][^>]*>[^<]*<\/[^>]+>\s*([^<]+)/i)?.[1]
+      ?.trim();
+    const detail = [
+      title,
+      target ? `unable to access ${target}` : "upstream returned an HTML block page",
+    ]
+      .filter(Boolean)
+      .join("; ");
+    return `${provider} request was blocked upstream for model "${model}" (HTTP ${res.status}): ${detail}`;
+  }
+
   let detail = "";
   try {
     const parsed = JSON.parse(raw);

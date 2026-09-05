@@ -122,6 +122,53 @@ describe("router", () => {
     }
   });
 
+  it("reserves max output tokens when pruning to a provider TPM limit", async () => {
+    await rateLimiter.reset();
+    const req: NormalizedRequest = {
+      systemPrompt: "You are a helpful assistant.",
+      messages: [{ role: "user", content: "word ".repeat(6000) }],
+      tools: [],
+      maxTokens: 4096,
+      stream: false,
+    };
+
+    const originalApiKey = config.groq.apiKey;
+    const originalFallback = [...config.fallbackOrder];
+    const originalHasCustom = config.hasCustomFallbackOrder;
+    const originalTpm = config.groq.limits.tpm;
+    const originalFetch = globalThis.fetch;
+
+    config.groq.apiKey = "test-groq-key";
+    config.groq.limits.tpm = 8000;
+    config.fallbackOrder = ["groq"];
+    config.hasCustomFallbackOrder = true;
+    globalThis.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            id: "chatcmpl-groq",
+            choices: [{ message: { role: "assistant", content: "OK" } }],
+            usage: { prompt_tokens: 3900, completion_tokens: 10 },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    ) as unknown as typeof fetch;
+
+    try {
+      await expect(routeRequest(req)).resolves.toMatchObject({ tierUsed: "groq" });
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+      expect(body.max_tokens).toBe(4096);
+      expect(body.messages[1].content.length).toBeLessThan(req.messages[0].content.length);
+    } finally {
+      globalThis.fetch = originalFetch;
+      config.groq.apiKey = originalApiKey;
+      config.groq.limits.tpm = originalTpm;
+      config.fallbackOrder = originalFallback;
+      config.hasCustomFallbackOrder = originalHasCustom;
+      await rateLimiter.reset();
+    }
+  });
+
   it("prunes large single messages down to fit Cerebras TPM limit and route successfully", async () => {
     await rateLimiter.reset();
     const largeContent = "This is a very long line of test text. ".repeat(3500); // ~33,000+ tokens

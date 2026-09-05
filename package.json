@@ -1,6 +1,6 @@
 {
   "name": "model-router",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Anthropic-compatible proxy for free-tier and local LLMs (Groq, Gemini Flash, OpenRouter, Ollama)",
   "main": "src/index.ts",
   "type": "module",
