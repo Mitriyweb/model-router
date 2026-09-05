@@ -2,28 +2,31 @@ import fs from "node:fs";
 import path from "node:path";
 import { version } from "../package.json";
 import { config } from "./config";
+import { configDirectory, configFilePath } from "./env";
 import { startServer } from "./server";
 
 function initEnvFile() {
-  const envPath = path.join(
-    process.env.HOME || process.env.USERPROFILE || ".",
-    ".model-router.env",
-  );
-  const envExamplePath = path.join(path.dirname(process.execPath), ".env.example");
+  const envExamplePaths = [
+    path.join(configDirectory, ".env.example"),
+    path.join(process.cwd(), ".env.example"),
+  ];
+  const envExamplePath = envExamplePaths.find((filePath) => fs.existsSync(filePath));
 
-  if (fs.existsSync(envPath)) {
-    console.log(".env file already exists at:", envPath);
+  if (fs.existsSync(configFilePath)) {
+    console.log(".env file already exists at:", configFilePath);
     return;
   }
 
-  if (!fs.existsSync(envExamplePath)) {
-    console.error(".env.example file not found. Please ensure it exists in the project root.");
+  if (!envExamplePath) {
+    console.error(
+      `Could not find .env.example next to the binary (${configDirectory}) or in the current directory (${process.cwd()}).`,
+    );
     process.exit(1);
   }
 
   try {
-    fs.copyFileSync(envExamplePath, envPath);
-    console.log(".env file created at:", envPath);
+    fs.copyFileSync(envExamplePath, configFilePath);
+    console.log(".env file created at:", configFilePath);
     console.log("Please edit the file with your actual configuration values.");
   } catch (err) {
     console.error("Failed to create .env file:", err);
@@ -73,4 +76,17 @@ if (portIndex !== -1 && args[portIndex + 1]) {
   port = Number(args[portIndex + 1]);
 }
 
-startServer(port);
+try {
+  startServer(port);
+} catch (err) {
+  const error = err as { code?: string; message?: string };
+
+  if (error.code === "EADDRINUSE" || error.message?.includes("EADDRINUSE")) {
+    console.error(`Cannot start model-router: port ${port} is already in use.`);
+    console.error(`Use another port: model-router --port ${port + 1}`);
+    console.error(`Find the process using it: lsof -nP -iTCP:${port} -sTCP:LISTEN`);
+    process.exitCode = 1;
+  } else {
+    throw err;
+  }
+}

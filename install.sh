@@ -47,6 +47,7 @@ esac
 
 TARGET_NAME="model-router-${TARGET_OS}-${TARGET_ARCH}"
 DOWNLOAD_URL="${GITHUB_URL}/releases/latest/download/${TARGET_NAME}"
+ENV_EXAMPLE_URL="${GITHUB_URL}/raw/main/.env.example"
 
 # 3. Determine install destination
 INSTALL_DIR="${HOME}/.local/bin"
@@ -80,6 +81,8 @@ else
 fi
 
 chmod +x "${TARGET_PATH}"
+
+curl -fsSL -o "${INSTALL_DIR}/.env.example" "${ENV_EXAMPLE_URL}"
 
 echo -e "${GREEN}✓ Successfully installed ${BINARY_NAME} to ${TARGET_PATH}${RESET}"
 

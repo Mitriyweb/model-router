@@ -1,3 +1,4 @@
+import "./env";
 import type { TierLimits, TierName } from "./types";
 
 export interface Config {

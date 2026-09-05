@@ -115,6 +115,19 @@ git diff HEAD~1 --stat
 
 Confirm the commit message and changed files match intent.
 
+## Phase 4: Version Release
+
+If `package.json` contains a version bump, create and push a matching tag and GitHub Release after the commit is verified:
+
+```bash
+VERSION="<version from package.json>"
+git tag -a "v${VERSION}" -m "release v${VERSION}"
+git push origin "v${VERSION}"
+gh release create "v${VERSION}" --title "v${VERSION}" --generate-notes
+```
+
+Verify that the tag points to the new commit and that the GitHub Release was created successfully. Do not create a tag or release when the package version is unchanged.
+
 ## Review Summary
 
 After commit, output the standard summary:
@@ -133,3 +146,4 @@ Issues: [count critical] / [count high] / [count medium]
 3. **Use `bun run`** — never `npm` / `yarn` / `pnpm`.
 4. **Conventional commits** — `type: description` format.
 5. **New commits only** — never amend unless explicitly requested.
+6. **Version bumps require a matching `v<version>` tag and GitHub Release** after the commit is verified.
