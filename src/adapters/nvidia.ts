@@ -17,7 +17,8 @@ export const nvidiaAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.nvidia.model);
+    const model = req.model ?? config.nvidia.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.nvidia.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
@@ -31,23 +32,24 @@ export const nvidiaAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      const msg = await readProviderError(res, "NVIDIA NIM", config.nvidia.model);
+      const msg = await readProviderError(res, "NVIDIA NIM", model);
       throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
-    return openAIResponseToAnthropic(data, config.nvidia.model);
+    return openAIResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.nvidia.model);
+    const model = req.model ?? config.nvidia.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.nvidia.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.nvidia.apiKey}` },
       payload,
-      config.nvidia.model,
+      model,
       signal,
       "nvidia",
     );

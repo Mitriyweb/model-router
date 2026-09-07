@@ -17,7 +17,8 @@ export const openrouterAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.openrouter.model);
+    const model = req.model ?? config.openrouter.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.openrouter.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
@@ -33,16 +34,17 @@ export const openrouterAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      const msg = await readProviderError(res, "OpenRouter", config.openrouter.model);
+      const msg = await readProviderError(res, "OpenRouter", model);
       throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
-    return openAIResponseToAnthropic(data, config.openrouter.model);
+    return openAIResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.openrouter.model);
+    const model = req.model ?? config.openrouter.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.openrouter.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
@@ -53,7 +55,7 @@ export const openrouterAdapter: ProviderAdapter = {
         "X-Title": "model-router",
       },
       payload,
-      config.openrouter.model,
+      model,
       signal,
       "openrouter",
     );

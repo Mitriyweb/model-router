@@ -200,14 +200,15 @@ export const geminiAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
+    const model = req.model ?? config.gemini.model;
     const payload = buildGeminiPayload(req);
-    const url = `${config.gemini.baseUrl}/models/${config.gemini.model}:streamGenerateContent?alt=sse&key=${config.gemini.apiKey}`;
+    const url = `${config.gemini.baseUrl}/models/${model}:streamGenerateContent?alt=sse&key=${config.gemini.apiKey}`;
     const signal = opts?.signal ?? req.signal;
 
     return new ReadableStream<Uint8Array>({
       async start(controller) {
         const writer = new AnthropicSSEWriter(controller);
-        writer.start(config.gemini.model);
+        writer.start(model);
 
         let textBlockOpen = false;
         let inputTokens = 0;
@@ -223,7 +224,7 @@ export const geminiAdapter: ProviderAdapter = {
           });
           if (!res.ok || !res.body) {
             const rawText = await res.text().catch(() => "");
-            const errMsg = await readProviderError(res, "Gemini", config.gemini.model).catch(
+            const errMsg = await readProviderError(res, "Gemini", model).catch(
               () => `Gemini ${res.status}: ${rawText}`,
             );
             const err = new ProviderError(errMsg, res.status, res.headers);
@@ -305,8 +306,9 @@ export const geminiAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
+    const model = req.model ?? config.gemini.model;
     const payload = buildGeminiPayload(req);
-    const url = `${config.gemini.baseUrl}/models/${config.gemini.model}:generateContent?key=${config.gemini.apiKey}`;
+    const url = `${config.gemini.baseUrl}/models/${model}:generateContent?key=${config.gemini.apiKey}`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
@@ -315,7 +317,7 @@ export const geminiAdapter: ProviderAdapter = {
       signal,
     });
     if (!res.ok) {
-      const msg = await readProviderError(res, "Gemini", config.gemini.model);
+      const msg = await readProviderError(res, "Gemini", model);
       throw new ProviderError(msg, res.status, res.headers);
     }
     const data = await res.json();
