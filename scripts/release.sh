@@ -25,6 +25,8 @@ tag="${version}"
 
 git commit -m "chore: bump version to ${version}"
 git tag "$tag"
+git pull --rebase origin HEAD
+git tag -f "$tag" HEAD
 git push origin HEAD "$tag"
 gh release create "$tag" --generate-notes --verify-tag
 
