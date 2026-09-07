@@ -16,7 +16,7 @@ export const groqAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "groq" ? req.model : config.groq.model;
+    const model = req.model ?? config.groq.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.groq.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
@@ -42,7 +42,7 @@ export const groqAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "groq" ? req.model : config.groq.model;
+    const model = req.model ?? config.groq.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.groq.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;

@@ -228,7 +228,7 @@ export function openAIRequestToNormalized(body: any, overrideModel?: string): No
   }
 
   return {
-    model: overrideModel || body.model,
+    model: overrideModel,
     systemPrompt,
     messages,
     tools: openAIToolsToAnthropic(body.tools ?? []),

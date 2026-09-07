@@ -105,7 +105,7 @@ export const cohereAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "cohere" ? req.model : config.cohere.model;
+    const model = req.model ?? config.cohere.model;
     const payload = buildCoherePayload(req, model, false);
     const url = `${config.cohere.baseUrl}/chat`;
     const signal = opts?.signal ?? req.signal;
@@ -129,7 +129,7 @@ export const cohereAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "cohere" ? req.model : config.cohere.model;
+    const model = req.model ?? config.cohere.model;
     const payload = buildCoherePayload(req, model, true);
     const url = `${config.cohere.baseUrl}/chat`;
     const signal = opts?.signal ?? req.signal;

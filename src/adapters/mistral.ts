@@ -17,7 +17,7 @@ export const mistralAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "mistral" ? req.model : config.mistral.model;
+    const model = req.model ?? config.mistral.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.mistral.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
@@ -41,7 +41,7 @@ export const mistralAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "mistral" ? req.model : config.mistral.model;
+    const model = req.model ?? config.mistral.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.mistral.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;

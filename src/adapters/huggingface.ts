@@ -32,7 +32,7 @@ export const huggingfaceAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest) {
-    const model = req.model && req.model !== "huggingface" ? req.model : config.huggingface.model;
+    const model = req.model ?? config.huggingface.model;
     console.log("[HF] request started");
     console.log(`[HF] model=${model}`);
     if (config.huggingface.provider) {
@@ -74,7 +74,7 @@ export const huggingfaceAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest) {
-    const model = req.model && req.model !== "huggingface" ? req.model : config.huggingface.model;
+    const model = req.model ?? config.huggingface.model;
     console.log("[HF] request started (stream)");
     console.log(`[HF] model=${model}`);
     if (config.huggingface.provider) {

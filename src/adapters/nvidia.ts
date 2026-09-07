@@ -17,7 +17,7 @@ export const nvidiaAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "nvidia" ? req.model : config.nvidia.model;
+    const model = req.model ?? config.nvidia.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.nvidia.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
@@ -41,7 +41,7 @@ export const nvidiaAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "nvidia" ? req.model : config.nvidia.model;
+    const model = req.model ?? config.nvidia.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.nvidia.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;

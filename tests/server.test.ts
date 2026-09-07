@@ -4,6 +4,19 @@ import { parseModelTierOverride, startServer } from "../src/server";
 
 describe("Server API Endpoints & Provider Specific Routing", () => {
   test("parseModelTierOverride parses provider prefixes and preserves nested model IDs", () => {
+    expect(parseModelTierOverride(undefined)).toEqual({
+      cleanModel: undefined,
+    });
+
+    expect(parseModelTierOverride("model-router-auto")).toEqual({
+      cleanModel: undefined,
+    });
+
+    expect(parseModelTierOverride("groq")).toEqual({
+      tier: "groq",
+      cleanModel: undefined,
+    });
+
     expect(parseModelTierOverride("groq/llama-3.3-70b-versatile")).toEqual({
       tier: "groq",
       cleanModel: "llama-3.3-70b-versatile",
@@ -16,7 +29,7 @@ describe("Server API Endpoints & Provider Specific Routing", () => {
 
     expect(parseModelTierOverride("local")).toEqual({
       tier: "local",
-      cleanModel: "local",
+      cleanModel: undefined,
     });
 
     expect(parseModelTierOverride("local/qwen2.5-coder:7b")).toEqual({
@@ -30,12 +43,18 @@ describe("Server API Endpoints & Provider Specific Routing", () => {
     });
   });
 
-  test("openAIRequestToNormalized sets clean override model", () => {
-    const normalized = openAIRequestToNormalized(
+  test("openAIRequestToNormalized sets clean override model or undefined when not provided", () => {
+    const normalizedWithOverride = openAIRequestToNormalized(
       { messages: [{ role: "user", content: "hi" }] },
       "anthropic/claude-sonnet-4",
     );
-    expect(normalized.model).toBe("anthropic/claude-sonnet-4");
+    expect(normalizedWithOverride.model).toBe("anthropic/claude-sonnet-4");
+
+    const normalizedWithoutOverride = openAIRequestToNormalized(
+      { messages: [{ role: "user", content: "hi" }] },
+      undefined,
+    );
+    expect(normalizedWithoutOverride.model).toBeUndefined();
   });
   const server = startServer(0);
   const baseUrl = `http://localhost:${server.port}`;

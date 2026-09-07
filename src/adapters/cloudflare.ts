@@ -17,7 +17,7 @@ export const cloudflareAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "cloudflare" ? req.model : config.cloudflare.model;
+    const model = req.model ?? config.cloudflare.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.cloudflare.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
@@ -41,7 +41,7 @@ export const cloudflareAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "cloudflare" ? req.model : config.cloudflare.model;
+    const model = req.model ?? config.cloudflare.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.cloudflare.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;

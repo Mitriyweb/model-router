@@ -102,18 +102,21 @@ function parseTierHeader(request: Request): TierName | undefined {
 
 export function parseModelTierOverride(modelName?: string): {
   tier?: TierName;
-  cleanModel: string;
+  cleanModel?: string;
 } {
-  if (!modelName) return { cleanModel: "model-router-auto" };
+  if (!modelName || modelName === "model-router-auto") {
+    return { cleanModel: undefined };
+  }
 
   for (const tier of VALID_TIERS) {
-    if (modelName === tier || modelName.startsWith(`${tier}/`)) {
-      const cleanModel = modelName.startsWith(`${tier}/`)
-        ? modelName.slice(tier.length + 1)
-        : modelName;
+    if (modelName === tier) {
+      return { tier, cleanModel: undefined };
+    }
+    if (modelName.startsWith(`${tier}/`)) {
+      const clean = modelName.slice(tier.length + 1);
       return {
         tier,
-        cleanModel: cleanModel || modelName,
+        cleanModel: clean || undefined,
       };
     }
   }
@@ -129,13 +132,13 @@ async function handleChatCompletions(request: Request, forceTier?: TierName): Pr
     return json({ error: { message: "Invalid JSON body", type: "invalid_request_error" } }, 400);
   }
 
-  const requestedModel = body.model || "model-router-auto";
+  const requestedModel = body.model;
   const { tier: tierOverride, cleanModel } = parseModelTierOverride(requestedModel);
   const headerTier = parseTierHeader(request);
   const targetTier = forceTier ?? headerTier ?? tierOverride;
 
-  const isLocalModel = requestedModel === "local" || requestedModel.startsWith("local/");
-  const forcePrivate = request.headers.get("x-router-private") === "true" || isLocalModel;
+  const isLocalModel = requestedModel === "local" || requestedModel?.startsWith("local/");
+  const forcePrivate = request.headers.get("x-router-private") === "true" || Boolean(isLocalModel);
 
   const normalized = openAIRequestToNormalized(body, cleanModel);
 

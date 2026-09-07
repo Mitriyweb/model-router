@@ -200,7 +200,7 @@ export const geminiAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "gemini" ? req.model : config.gemini.model;
+    const model = req.model ?? config.gemini.model;
     const payload = buildGeminiPayload(req);
     const url = `${config.gemini.baseUrl}/models/${model}:streamGenerateContent?alt=sse&key=${config.gemini.apiKey}`;
     const signal = opts?.signal ?? req.signal;
@@ -306,7 +306,7 @@ export const geminiAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "gemini" ? req.model : config.gemini.model;
+    const model = req.model ?? config.gemini.model;
     const payload = buildGeminiPayload(req);
     const url = `${config.gemini.baseUrl}/models/${model}:generateContent?key=${config.gemini.apiKey}`;
     const signal = opts?.signal ?? req.signal;

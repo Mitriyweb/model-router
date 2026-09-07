@@ -17,7 +17,7 @@ export const openrouterAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "openrouter" ? req.model : config.openrouter.model;
+    const model = req.model ?? config.openrouter.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.openrouter.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
@@ -43,7 +43,7 @@ export const openrouterAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "openrouter" ? req.model : config.openrouter.model;
+    const model = req.model ?? config.openrouter.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.openrouter.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;

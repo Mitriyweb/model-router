@@ -17,7 +17,7 @@ export const cerebrasAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "cerebras" ? req.model : config.cerebras.model;
+    const model = req.model ?? config.cerebras.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.cerebras.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
@@ -41,7 +41,7 @@ export const cerebrasAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "cerebras" ? req.model : config.cerebras.model;
+    const model = req.model ?? config.cerebras.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.cerebras.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;

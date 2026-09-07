@@ -15,7 +15,7 @@ export const localAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "local" ? req.model : config.local.model;
+    const model = req.model ?? config.local.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.local.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
@@ -35,7 +35,7 @@ export const localAdapter: ProviderAdapter = {
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const model = req.model && req.model !== "local" ? req.model : config.local.model;
+    const model = req.model ?? config.local.model;
     const payload = buildOpenAIPayload(req, model);
     const url = `${config.local.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
