@@ -183,7 +183,7 @@ export function openAIToolsToAnthropic(tools: any[]): ToolDefinition[] {
   }));
 }
 
-export function openAIRequestToNormalized(body: any): NormalizedRequest {
+export function openAIRequestToNormalized(body: any, overrideModel?: string): NormalizedRequest {
   let systemPrompt = "";
   const messages: AnthropicMessage[] = [];
 
@@ -228,6 +228,7 @@ export function openAIRequestToNormalized(body: any): NormalizedRequest {
   }
 
   return {
+    model: overrideModel || body.model,
     systemPrompt,
     messages,
     tools: openAIToolsToAnthropic(body.tools ?? []),

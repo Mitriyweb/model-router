@@ -16,7 +16,8 @@ export const groqAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.groq.model);
+    const model = req.model && req.model !== "groq" ? req.model : config.groq.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.groq.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
@@ -37,18 +38,19 @@ export const groqAdapter: ProviderAdapter = {
 
     const data = await res.json();
     console.log("[groq] upstream response:", JSON.stringify(data).slice(0, 1200));
-    return openAIResponseToAnthropic(data, config.groq.model);
+    return openAIResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.groq.model);
+    const model = req.model && req.model !== "groq" ? req.model : config.groq.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.groq.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.groq.apiKey}` },
       payload,
-      config.groq.model,
+      model,
       signal,
       "groq",
     );

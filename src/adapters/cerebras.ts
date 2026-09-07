@@ -17,7 +17,8 @@ export const cerebrasAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.cerebras.model);
+    const model = req.model && req.model !== "cerebras" ? req.model : config.cerebras.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.cerebras.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
@@ -31,23 +32,24 @@ export const cerebrasAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      const msg = await readProviderError(res, "Cerebras", config.cerebras.model);
+      const msg = await readProviderError(res, "Cerebras", model);
       throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
-    return openAIResponseToAnthropic(data, config.cerebras.model);
+    return openAIResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.cerebras.model);
+    const model = req.model && req.model !== "cerebras" ? req.model : config.cerebras.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.cerebras.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.cerebras.apiKey}` },
       payload,
-      config.cerebras.model,
+      model,
       signal,
       "cerebras",
     );

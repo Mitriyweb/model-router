@@ -17,7 +17,8 @@ export const cloudflareAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.cloudflare.model);
+    const model = req.model && req.model !== "cloudflare" ? req.model : config.cloudflare.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.cloudflare.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
@@ -31,23 +32,24 @@ export const cloudflareAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      const msg = await readProviderError(res, "Cloudflare AI", config.cloudflare.model);
+      const msg = await readProviderError(res, "Cloudflare AI", model);
       throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
-    return openAIResponseToAnthropic(data, config.cloudflare.model);
+    return openAIResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.cloudflare.model);
+    const model = req.model && req.model !== "cloudflare" ? req.model : config.cloudflare.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.cloudflare.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.cloudflare.apiToken}` },
       payload,
-      config.cloudflare.model,
+      model,
       signal,
       "cloudflare",
     );

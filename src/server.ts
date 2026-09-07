@@ -100,14 +100,20 @@ function parseTierHeader(request: Request): TierName | undefined {
   return undefined;
 }
 
-function parseModelTierOverride(modelName?: string): { tier?: TierName; cleanModel: string } {
+export function parseModelTierOverride(modelName?: string): {
+  tier?: TierName;
+  cleanModel: string;
+} {
   if (!modelName) return { cleanModel: "model-router-auto" };
 
   for (const tier of VALID_TIERS) {
     if (modelName === tier || modelName.startsWith(`${tier}/`)) {
+      const cleanModel = modelName.startsWith(`${tier}/`)
+        ? modelName.slice(tier.length + 1)
+        : modelName;
       return {
         tier,
-        cleanModel: modelName.includes("/") ? modelName.split("/")[1] : modelName,
+        cleanModel: cleanModel || modelName,
       };
     }
   }
@@ -124,14 +130,14 @@ async function handleChatCompletions(request: Request, forceTier?: TierName): Pr
   }
 
   const requestedModel = body.model || "model-router-auto";
-  const { tier: tierOverride } = parseModelTierOverride(requestedModel);
+  const { tier: tierOverride, cleanModel } = parseModelTierOverride(requestedModel);
   const headerTier = parseTierHeader(request);
   const targetTier = forceTier ?? headerTier ?? tierOverride;
 
-  const forcePrivate =
-    request.headers.get("x-router-private") === "true" || requestedModel.startsWith("local");
+  const isLocalModel = requestedModel === "local" || requestedModel.startsWith("local/");
+  const forcePrivate = request.headers.get("x-router-private") === "true" || isLocalModel;
 
-  const normalized = openAIRequestToNormalized(body);
+  const normalized = openAIRequestToNormalized(body, cleanModel);
 
   if (normalized.stream) {
     try {

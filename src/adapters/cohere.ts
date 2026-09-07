@@ -105,7 +105,8 @@ export const cohereAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildCoherePayload(req, config.cohere.model, false);
+    const model = req.model && req.model !== "cohere" ? req.model : config.cohere.model;
+    const payload = buildCoherePayload(req, model, false);
     const url = `${config.cohere.baseUrl}/chat`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
@@ -124,18 +125,19 @@ export const cohereAdapter: ProviderAdapter = {
     }
 
     const data = await res.json();
-    return cohereResponseToAnthropic(data, config.cohere.model);
+    return cohereResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildCoherePayload(req, config.cohere.model, true);
+    const model = req.model && req.model !== "cohere" ? req.model : config.cohere.model;
+    const payload = buildCoherePayload(req, model, true);
     const url = `${config.cohere.baseUrl}/chat`;
     const signal = opts?.signal ?? req.signal;
 
     return new ReadableStream({
       async start(controller) {
         const writer = new AnthropicSSEWriter(controller);
-        writer.start(config.cohere.model);
+        writer.start(model);
 
         try {
           const res = await fetch(url, {

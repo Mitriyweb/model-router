@@ -17,7 +17,8 @@ export const mistralAdapter: ProviderAdapter = {
   },
 
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.mistral.model);
+    const model = req.model && req.model !== "mistral" ? req.model : config.mistral.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.mistral.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
@@ -31,23 +32,24 @@ export const mistralAdapter: ProviderAdapter = {
     });
 
     if (!res.ok) {
-      const msg = await readProviderError(res, "Mistral", config.mistral.model);
+      const msg = await readProviderError(res, "Mistral", model);
       throw new ProviderError(msg, res.status, res.headers);
     }
 
     const data = await res.json();
-    return openAIResponseToAnthropic(data, config.mistral.model);
+    return openAIResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
-    const payload = buildOpenAIPayload(req, config.mistral.model);
+    const model = req.model && req.model !== "mistral" ? req.model : config.mistral.model;
+    const payload = buildOpenAIPayload(req, model);
     const url = `${config.mistral.baseUrl}/chat/completions`;
     const signal = opts?.signal ?? req.signal;
     return createOpenAICompatibleStream(
       url,
       { Authorization: `Bearer ${config.mistral.apiKey}` },
       payload,
-      config.mistral.model,
+      model,
       signal,
       "mistral",
     );

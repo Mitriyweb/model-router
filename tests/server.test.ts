@@ -1,7 +1,42 @@
 import { describe, expect, test } from "bun:test";
-import { startServer } from "../src/server";
+import { openAIRequestToNormalized } from "../src/adapters/openaiCompatible";
+import { parseModelTierOverride, startServer } from "../src/server";
 
 describe("Server API Endpoints & Provider Specific Routing", () => {
+  test("parseModelTierOverride parses provider prefixes and preserves nested model IDs", () => {
+    expect(parseModelTierOverride("groq/llama-3.3-70b-versatile")).toEqual({
+      tier: "groq",
+      cleanModel: "llama-3.3-70b-versatile",
+    });
+
+    expect(parseModelTierOverride("openrouter/anthropic/claude-sonnet-4")).toEqual({
+      tier: "openrouter",
+      cleanModel: "anthropic/claude-sonnet-4",
+    });
+
+    expect(parseModelTierOverride("local")).toEqual({
+      tier: "local",
+      cleanModel: "local",
+    });
+
+    expect(parseModelTierOverride("local/qwen2.5-coder:7b")).toEqual({
+      tier: "local",
+      cleanModel: "qwen2.5-coder:7b",
+    });
+
+    expect(parseModelTierOverride("llama-3.3-70b")).toEqual({
+      tier: undefined,
+      cleanModel: "llama-3.3-70b",
+    });
+  });
+
+  test("openAIRequestToNormalized sets clean override model", () => {
+    const normalized = openAIRequestToNormalized(
+      { messages: [{ role: "user", content: "hi" }] },
+      "anthropic/claude-sonnet-4",
+    );
+    expect(normalized.model).toBe("anthropic/claude-sonnet-4");
+  });
   const server = startServer(0);
   const baseUrl = `http://localhost:${server.port}`;
 
@@ -94,5 +129,19 @@ describe("Server API Endpoints & Provider Specific Routing", () => {
     expect(res.status).toBe(502);
     const json = await res.json();
     expect(json.error.type).toBe("all_tiers_exhausted");
+  });
+
+  test("forceTier via endpoint bypasses deterministic policies", async () => {
+    // Repeated prompt would normally trigger cache (deterministic policy), but forceTier skips deterministic policies
+    const res = await fetch(`${baseUrl}/v1/providers/huggingface/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "deterministic test prompt" }],
+      }),
+    });
+    expect(res.status).toBe(502);
   });
 });

@@ -109,8 +109,8 @@ export async function routeRequest(
 ): Promise<RouteResult> {
   const rule = POLICIES.find((r) => r.match(req));
 
-  // Deterministic strategy: try to resolve without touching any model.
-  if (rule?.strategy.kind === "deterministic") {
+  // If forceTier is explicitly specified, skip deterministic policies to guarantee routing to target tier.
+  if (!opts?.forceTier && rule?.strategy.kind === "deterministic") {
     const resolver = resolvers[rule.strategy.resolver];
     if (!resolver) {
       throw new Error(
@@ -252,7 +252,7 @@ export async function routeRequestStream(
 ): Promise<StreamRouteResult> {
   const rule = POLICIES.find((r) => r.match(req));
 
-  if (rule?.strategy.kind === "deterministic") {
+  if (!opts?.forceTier && rule?.strategy.kind === "deterministic") {
     const resolver = resolvers[rule.strategy.resolver];
     if (!resolver) {
       throw new Error(

@@ -49,6 +49,7 @@ export interface AnthropicResponse {
 }
 
 export interface NormalizedRequest {
+  model?: string;
   systemPrompt: string;
   messages: AnthropicMessage[];
   tools: ToolDefinition[];
