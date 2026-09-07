@@ -67,8 +67,9 @@ export function estimateTokens(req: NormalizedRequest): number {
 export function planTierOrder(
   _req: NormalizedRequest,
   estimatedInputTokens: number,
-  opts?: { forcePrivate?: boolean },
+  opts?: { forcePrivate?: boolean; forceTier?: TierName },
 ): TierName[] {
+  if (opts?.forceTier) return [opts.forceTier];
   if (opts?.forcePrivate) return ["local"];
 
   let baseOrder: TierName[];
@@ -104,7 +105,7 @@ export interface RouteResult {
 
 export async function routeRequest(
   req: NormalizedRequest,
-  opts?: { forcePrivate?: boolean },
+  opts?: { forcePrivate?: boolean; forceTier?: TierName },
 ): Promise<RouteResult> {
   const rule = POLICIES.find((r) => r.match(req));
 
@@ -130,7 +131,9 @@ export async function routeRequest(
   const estimated = estimateTokens(req);
   let order = planTierOrder(req, estimated, opts);
 
-  if (rule?.strategy.kind === "tier") {
+  if (opts?.forceTier) {
+    order = [opts.forceTier];
+  } else if (rule?.strategy.kind === "tier") {
     const forcedTier = rule.strategy.tier;
     order = [forcedTier, ...order.filter((t) => t !== forcedTier)];
   } else if (rule?.strategy.kind === "local") {
@@ -212,7 +215,7 @@ export async function routeRequest(
   throw new Error(`All tiers exhausted or unavailable: ${JSON.stringify(attempts, null, 2)}`);
 }
 
-function hasCredentials(tier: TierName): boolean {
+export function hasCredentials(tier: TierName): boolean {
   switch (tier) {
     case "cerebras":
       return Boolean(config.cerebras.apiKey);
@@ -245,7 +248,7 @@ export interface StreamRouteResult {
 
 export async function routeRequestStream(
   req: NormalizedRequest,
-  opts?: { forcePrivate?: boolean },
+  opts?: { forcePrivate?: boolean; forceTier?: TierName },
 ): Promise<StreamRouteResult> {
   const rule = POLICIES.find((r) => r.match(req));
 
@@ -269,7 +272,9 @@ export async function routeRequestStream(
 
   const estimated = estimateTokens(req);
   let order = planTierOrder(req, estimated, opts);
-  if (rule?.strategy.kind === "tier") {
+  if (opts?.forceTier) {
+    order = [opts.forceTier];
+  } else if (rule?.strategy.kind === "tier") {
     const forcedTier = rule.strategy.tier;
     order = [forcedTier, ...order.filter((t) => t !== forcedTier)];
   } else if (rule?.strategy.kind === "local") {
