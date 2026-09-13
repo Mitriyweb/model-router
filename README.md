@@ -1,6 +1,6 @@
 # model-router
 
-Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, **mini-agent**, and custom Chat UIs to run on **10 free-tier and local LLM providers** instead of expensive paid APIs.
+Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, **mini-agent**, and custom Chat UIs to run on **11 free-tier and local LLM providers** instead of expensive paid APIs.
 
 ## Supported Providers
 
@@ -16,6 +16,7 @@ Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **
 | **Cloudflare AI** | 60 RPM / 10k RPD | Cloudflare AI | Serverless edge inference |
 | **Cohere** | 10 RPM / 100 RPD | Cohere Chat v2 | Command R+ with advanced RAG & tool-use |
 | **Local (Ollama)** | Unlimited | OpenAI-compatible | Fully offline & private execution |
+| **OpenCode Zen** | Free tier (local limits apply) | OpenAI-compatible | Ling 3.0 Flash Fin Free (262k context, 32k output, reasoning) |
 
 ---
 

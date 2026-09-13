@@ -68,6 +68,12 @@ export interface Config {
     model: string;
     limits: TierLimits;
   };
+  opencode: {
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+    limits: TierLimits;
+  };
 }
 
 const defaultFallbackOrder: TierName[] = [
@@ -208,6 +214,16 @@ export const config: Config = {
       rpm: Number(process.env.LOCAL_RPM ?? 120),
       tpm: Number(process.env.LOCAL_TPM ?? 100_000),
       rpd: Number(process.env.LOCAL_RPD ?? 100_000),
+    },
+  },
+  opencode: {
+    apiKey: process.env.OPENCODE_API_KEY ?? "",
+    baseUrl: process.env.OPENCODE_BASE_URL ?? "https://opencode.ai/zen/v1",
+    model: process.env.OPENCODE_MODEL ?? "ling-3.0-flash-fin-free",
+    limits: {
+      rpm: Number(process.env.OPENCODE_RPM ?? 30),
+      tpm: Number(process.env.OPENCODE_TPM ?? 60_000),
+      rpd: Number(process.env.OPENCODE_RPD ?? 14_400),
     },
   },
 };
