@@ -91,6 +91,7 @@ export function planTierOrder(
       "cloudflare",
       "cohere",
       "local",
+      "opencode",
     ];
   } else {
     baseOrder = [...config.fallbackOrder];
