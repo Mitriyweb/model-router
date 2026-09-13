@@ -7,7 +7,6 @@ import { huggingfaceAdapter } from "./adapters/huggingface";
 import { localAdapter } from "./adapters/local";
 import { mistralAdapter } from "./adapters/mistral";
 import { nvidiaAdapter } from "./adapters/nvidia";
-import { opencodeAdapter } from "./adapters/opencode";
 import { openrouterAdapter } from "./adapters/openrouter";
 import { cacheKey, setCached } from "./cache";
 import { config } from "./config";
@@ -32,7 +31,6 @@ const adapters: Record<TierName, ProviderAdapter> = {
   cloudflare: cloudflareAdapter,
   cohere: cohereAdapter,
   local: localAdapter,
-  opencode: opencodeAdapter,
 };
 
 const limitsByTier: Record<TierName, { rpm: number; tpm: number; rpd: number }> = {
@@ -46,7 +44,6 @@ const limitsByTier: Record<TierName, { rpm: number; tpm: number; rpd: number }> 
   cloudflare: config.cloudflare.limits,
   cohere: config.cohere.limits,
   local: config.local.limits,
-  opencode: config.opencode.limits,
 };
 
 /** Token estimate via cl100k_base tokenizer. */
@@ -91,7 +88,6 @@ export function planTierOrder(
       "cloudflare",
       "cohere",
       "local",
-      "opencode",
     ];
   } else {
     baseOrder = [...config.fallbackOrder];
@@ -241,8 +237,6 @@ export function hasCredentials(tier: TierName): boolean {
       return Boolean(config.cohere.apiKey);
     case "local":
       return true;
-    case "opencode":
-      return Boolean(config.opencode.apiKey);
   }
 }
 

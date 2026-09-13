@@ -475,40 +475,4 @@ describe("router", () => {
 
     expect(mistralAdapter.canHandle(req, estimateTokens(req))).toBe(true);
   });
-
-  it("routes request to opencode when forceTier is set", async () => {
-    await rateLimiter.reset();
-    const req: NormalizedRequest = {
-      systemPrompt: "Hi",
-      messages: [{ role: "user", content: "Hello opencode" }],
-      tools: [],
-      stream: false,
-    };
-
-    const originalApiKey = config.opencode.apiKey;
-    const originalFetch = globalThis.fetch;
-    config.opencode.apiKey = "opencode-key";
-
-    globalThis.fetch = mock(
-      async () =>
-        new Response(
-          JSON.stringify({
-            id: "chatcmpl-opencode-force",
-            choices: [{ message: { role: "assistant", content: "Hi from OpenCode!" } }],
-            usage: { prompt_tokens: 5, completion_tokens: 5 },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-    ) as unknown as typeof fetch;
-
-    try {
-      const res = await routeRequest(req, { forceTier: "opencode" });
-      expect(res.tierUsed).toBe("opencode");
-      expect(res.response.content[0]).toEqual({ type: "text", text: "Hi from OpenCode!" });
-    } finally {
-      globalThis.fetch = originalFetch;
-      config.opencode.apiKey = originalApiKey;
-      await rateLimiter.reset();
-    }
-  });
 });

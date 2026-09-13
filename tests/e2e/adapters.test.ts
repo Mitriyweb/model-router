@@ -7,7 +7,6 @@ import { groqAdapter } from "../../src/adapters/groq";
 import { localAdapter } from "../../src/adapters/local";
 import { mistralAdapter } from "../../src/adapters/mistral";
 import { nvidiaAdapter } from "../../src/adapters/nvidia";
-import { opencodeAdapter } from "../../src/adapters/opencode";
 import { openrouterAdapter } from "../../src/adapters/openrouter";
 import { config } from "../../src/config";
 import type { NormalizedRequest, ProviderAdapter } from "../../src/types";
@@ -188,15 +187,6 @@ describe.skipIf(!shouldRunE2E)("E2E Provider Adapter Tests", () => {
     "local adapter direct connection",
     async () => {
       await testAdapter(localAdapter);
-    },
-    E2E_TIMEOUT_MS,
-  );
-
-  const opencodeEnabled = isKeyValid(config.opencode.apiKey);
-  test.skipIf(!opencodeEnabled)(
-    "opencode adapter direct connection",
-    async () => {
-      await testAdapter(opencodeAdapter);
     },
     E2E_TIMEOUT_MS,
   );
