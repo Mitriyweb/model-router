@@ -346,7 +346,9 @@ export function openAIResponseToAnthropic(data: any, model: string): AnthropicRe
   const message = choice?.message ?? {};
   const content: ContentBlock[] = [];
 
-  const textCandidates = [message.content, message.reasoning].filter((v) => typeof v === "string");
+  const textCandidates = [message.content, message.reasoning, message.reasoning_content].filter(
+    (v) => typeof v === "string",
+  );
   const mainText = textCandidates.join("\n").trim();
 
   if (mainText) {
@@ -444,6 +446,7 @@ export async function streamOpenAIToAnthropic(
   let activeToolIndex: number | null = null;
   const toolBlocks = new Map<number, { id: string; name: string }>();
   let finishReason: string | null = null;
+  let inputTokens: number | undefined;
   let outputTokens: number | undefined;
 
   const reader = upstream.body.getReader();
@@ -473,10 +476,12 @@ export async function streamOpenAIToAnthropic(
 
       const delta = chunk.choices?.[0]?.delta;
       if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+      if (chunk.usage?.prompt_tokens) inputTokens = chunk.usage.prompt_tokens;
       if (chunk.usage?.completion_tokens) outputTokens = chunk.usage.completion_tokens;
       if (!delta) continue;
 
-      if (delta.content) {
+      const contentDelta = delta.content || delta.reasoning || delta.reasoning_content;
+      if (contentDelta) {
         if (activeToolIndex !== null) {
           writer.stopBlock();
           activeToolIndex = null;
@@ -485,7 +490,7 @@ export async function streamOpenAIToAnthropic(
           writer.startText();
           textBlockOpen = true;
         }
-        writer.textDelta(delta.content);
+        writer.textDelta(contentDelta);
       }
 
       for (const call of delta.tool_calls ?? []) {
@@ -516,5 +521,5 @@ export async function streamOpenAIToAnthropic(
       : finishReason === "length"
         ? "max_tokens"
         : "end_turn";
-  writer.end(stopReason, 0, outputTokens);
+  writer.end(stopReason, inputTokens ?? 0, outputTokens);
 }
