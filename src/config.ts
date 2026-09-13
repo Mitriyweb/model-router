@@ -87,6 +87,7 @@ const defaultFallbackOrder: TierName[] = [
   "cloudflare",
   "cohere",
   "local",
+  "opencode",
 ];
 
 function parseFallbackOrder(value?: string): TierName[] {
