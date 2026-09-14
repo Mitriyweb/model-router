@@ -69,8 +69,7 @@ export type TierName =
   | "huggingface"
   | "cloudflare"
   | "cohere"
-  | "local"
-  | "opencode";
+  | "local";
 export type ResolvedBy = TierName | "deterministic";
 
 export interface TierLimits {

@@ -85,7 +85,6 @@ const VALID_TIERS: TierName[] = [
   "cloudflare",
   "cohere",
   "local",
-  "opencode",
 ];
 
 function isValidTier(tier?: string | null): tier is TierName {
