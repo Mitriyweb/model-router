@@ -26,6 +26,8 @@ Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **
 1. **Anthropic API** (`POST /v1/messages`): For Claude Code, Agent Team, and Anthropic clients.
 2. **OpenAI API** (`POST /v1/chat/completions` & `GET /v1/models`): For ZeroClaw, Aider, Cline, Roo Code, Cursor, Continue.dev, mini-agent, and Web Chat interfaces.
 
+Both endpoints also accept gzip-compressed request bodies — send `Content-Encoding: gzip` with a gzipped JSON payload to reduce upload size on large prompts.
+
 ---
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Visit-blue)](https://mitriyweb.github.io/model-router)
@@ -249,7 +251,7 @@ bun run test:e2e
 
 ### E2E Adapter Testing
 
-`model-router` includes dedicated End-to-End (E2E) tests for each adapter (`cerebras`, `cloudflare`, `cohere`, `gemini`, `groq`, `local`, `mistral`, `nvidia`, `openrouter`).
+`model-router` includes dedicated End-to-End (E2E) tests for each adapter (`cerebras`, `cloudflare`, `cohere`, `gemini`, `groq`, `huggingface`, `local`, `mistral`, `nvidia`, `openrouter`).
 
 - **CI & Pre-commit Safety**: E2E tests do NOT run during CI (`bun test` or `bun run validate`) or pre-commit hooks to avoid consuming provider quotas or failing build pipelines without credentials.
 - **Direct Live Verification**: Running `bun run test:e2e` sets `RUN_E2E=true` and directly issues requests via each adapter's `send()` and `sendStream()` methods to confirm API connectivity, authentication, and correct response translation.

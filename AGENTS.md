@@ -1,15 +1,16 @@
 # model-router
 
-Universal AI proxy that routes Codex, Agent Team, ZeroClaw, Aider, Cline, mini-agent, and any OpenAI-compatible client through **9 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
+Universal AI proxy that routes Codex, Agent Team, ZeroClaw, Aider, Cline, mini-agent, and any OpenAI-compatible client through **10 free-tier and local LLM providers** — automatically with fallback, caching, and rate limiting.
 
 ## Key Features
 
 - **Dual API**: Anthropic (`/v1/messages`) + OpenAI (`/v1/chat/completions`, `/v1/models`) on the same port
-- **9 providers**: Cerebras, Groq, Gemini, OpenRouter, Mistral, NVIDIA NIM, Cloudflare AI, Cohere, Local (Ollama)
+- **10 providers**: Cerebras, Groq, Gemini, OpenRouter, Mistral, NVIDIA NIM, Hugging Face, Cloudflare AI, Cohere, Local (Ollama)
 - **Automatic fallback**: Tries providers in order, skips rate-limited or unconfigured ones
 - **SHA-256 cache**: Exact-repeat requests served instantly without hitting upstream
 - **SSE streaming**: Anthropic and OpenAI event formats, bidirectional converters
 - **Rate limiter**: Per-provider RPM / TPM / RPD tracking
+- **Gzip bodies**: Accepts `Content-Encoding: gzip` request bodies on both APIs
 
 ## Project Structure
 
@@ -20,7 +21,7 @@ model-router/
 │   │   ├── openaiCompatible.ts  # Shared OpenAI-format logic + request/response converters
 │   │   ├── gemini.ts            # Google Gemini (native API)
 │   │   ├── cohere.ts            # Cohere Chat v2
-│   │   ├── mistral.ts, cerebras.ts, groq.ts, nvidia.ts, cloudflare.ts, openrouter.ts, local.ts
+│   │   ├── mistral.ts, cerebras.ts, groq.ts, nvidia.ts, cloudflare.ts, openrouter.ts, huggingface.ts, local.ts
 │   ├── streaming/
 │   │   ├── anthropicSSE.ts    # Writes Anthropic SSE events
 │   │   ├── openaiSSE.ts       # Converts Anthropic SSE → OpenAI SSE chunks
@@ -36,11 +37,16 @@ model-router/
 │   ├── server.ts              # HTTP server (Anthropic + OpenAI endpoints)
 │   └── index.ts               # Entrypoint
 ├── tests/
-│   ├── streaming.test.ts      # AnthropicSSEWriter + reconstructingStream
-│   ├── openai.test.ts         # OpenAI request/response converters + SSE transformer
-│   ├── cache.test.ts          # SHA-256 hash + store/retrieve
-│   ├── router.test.ts         # Token estimation + tier planning
-│   └── rateLimiter.test.ts    # RPM / TPM / RPD enforcement
+│   ├── adapters/             # Per-adapter unit tests
+│   ├── e2e/                  # Live provider tests (bun run test:e2e, gated on env keys)
+│   ├── streaming.test.ts     # AnthropicSSEWriter + reconstructingStream
+│   ├── openai.test.ts        # OpenAI request/response converters + SSE transformer
+│   ├── cache.test.ts         # SHA-256 hash + store/retrieve
+│   ├── router.test.ts        # Token estimation + tier planning
+│   ├── rateLimiter.test.ts   # RPM / TPM / RPD enforcement
+│   ├── server.test.ts        # Endpoint routing, provider overrides, /v1/models
+│   ├── pruner.test.ts        # Context pruning behavior
+│   └── env.test.ts           # .env loading
 ├── docs/
 │   └── index.html             # GitHub Pages landing page
 ├── .github/
@@ -48,7 +54,7 @@ model-router/
 │   ├── workflows/release.yml  # Release: matrix builds (darwin-arm64/x64, linux-arm64/x64) + GitHub Release
 │   └── workflows/deploy.yml   # Deploy docs/ to GitHub Pages
 ├── .agents/
-│   └── workflows/review-and-commit.md  # /review-and-commit workflow
+│   └── skills/review-and-commit/SKILL.md  # /review-and-commit skill
 ├── .env.example               # All env vars documented
 ├── install.sh                 # One-line installer script
 ├── biome.json                 # Linting and formatting config
@@ -123,7 +129,7 @@ Copy `.env.example` to `.env` and fill in keys for providers you want to use.
 
 Key settings:
 ```bash
-FALLBACK_ORDER=gemini,mistral,cerebras,groq,openrouter,nvidia,cloudflare,cohere,local
+FALLBACK_ORDER=cerebras,groq,gemini,openrouter,mistral,nvidia,huggingface,cloudflare,cohere,local
 PORT=8787
 ```
 
