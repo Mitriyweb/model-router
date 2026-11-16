@@ -1,9 +1,19 @@
+import { gunzipSync } from "node:zlib";
 import { anthropicResponseToOpenAI, openAIRequestToNormalized } from "./adapters/openaiCompatible";
 import { config } from "./config";
 import { rateLimiter } from "./rateLimiter";
 import { hasCredentials, routeRequest, routeRequestStream } from "./router";
 import { anthropicStreamToOpenAI } from "./streaming/openaiSSE";
 import type { AnthropicRequest, NormalizedRequest, TierName } from "./types";
+
+async function readJsonBody(request: Request): Promise<unknown> {
+  const encoding = request.headers.get("content-encoding")?.toLowerCase();
+  if (encoding === "gzip" || encoding === "x-gzip") {
+    const compressed = Buffer.from(await request.arrayBuffer());
+    return JSON.parse(gunzipSync(compressed).toString("utf8"));
+  }
+  return request.json();
+}
 
 function normalize(req: AnthropicRequest): NormalizedRequest {
   const systemPrompt =
@@ -22,7 +32,7 @@ function normalize(req: AnthropicRequest): NormalizedRequest {
 async function handleMessages(request: Request, forceTier?: TierName): Promise<Response> {
   let body: AnthropicRequest;
   try {
-    body = await request.json();
+    body = (await readJsonBody(request)) as AnthropicRequest;
   } catch {
     return json({ error: "invalid JSON body" }, 400);
   }
@@ -127,7 +137,7 @@ export function parseModelTierOverride(modelName?: string): {
 async function handleChatCompletions(request: Request, forceTier?: TierName): Promise<Response> {
   let body: any;
   try {
-    body = await request.json();
+    body = await readJsonBody(request);
   } catch {
     return json({ error: { message: "Invalid JSON body", type: "invalid_request_error" } }, 400);
   }
