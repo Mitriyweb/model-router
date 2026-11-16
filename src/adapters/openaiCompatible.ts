@@ -346,9 +346,13 @@ export function openAIResponseToAnthropic(data: any, model: string): AnthropicRe
   const message = choice?.message ?? {};
   const content: ContentBlock[] = [];
 
-  const textCandidates = [message.content, message.reasoning, message.reasoning_content].filter(
-    (v) => typeof v === "string",
-  );
+  const textCandidates = [
+    ...new Set(
+      [message.content, message.reasoning, message.reasoning_content].filter(
+        (v): v is string => typeof v === "string" && v.trim().length > 0,
+      ),
+    ),
+  ];
   const mainText = textCandidates.join("\n").trim();
 
   if (mainText) {
