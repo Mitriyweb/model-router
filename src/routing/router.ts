@@ -1,5 +1,5 @@
 import { cacheKey, setCached } from "../cache";
-import { AllTiersFailedError, type RouteAttempt } from "../errors";
+import { AllTiersFailedError, type RouteAttempt, errorMessage } from "../errors";
 import { log } from "../log";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 export { retryAfterFromError, retryAfterFromHeaders } from "../rateLimiter";
@@ -64,13 +64,14 @@ async function executeTiers<T>(
       const value = await run(attempt);
       log.info(`[router] success via ${tier}`);
       return { tierUsed: tier, value, attempts, policyApplied: plan.rule?.name };
-    } catch (err: any) {
-      log.warn(`[router] fail ${tier}: ${err.message ?? String(err)}`);
+    } catch (err) {
+      const message = errorMessage(err);
+      log.warn(`[router] fail ${tier}: ${message}`);
       const retryAfterMs = retryAfterFromError(err);
       if (retryAfterMs !== undefined) {
         rateLimiter.markUnavailable(tier, retryAfterMs);
       }
-      attempts.push({ tier, error: err.message ?? String(err) });
+      attempts.push({ tier, error: message });
     }
   }
 

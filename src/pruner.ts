@@ -23,7 +23,7 @@ export function estimateMessageTokens(message: AnthropicMessage): number {
 function isValidMessageSequence(messages: AnthropicMessage[]): boolean {
   if (messages.length === 0) return true;
   // Upstream APIs require message history to start with a user message
-  if (messages[0].role !== "user") return false;
+  if (messages[0]?.role !== "user") return false;
 
   // Track tool_use IDs and tool_result references to ensure complete pairs
   const toolUses = new Map<string, number>();
@@ -31,6 +31,7 @@ function isValidMessageSequence(messages: AnthropicMessage[]): boolean {
 
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
+    if (!m) continue;
     if (Array.isArray(m.content)) {
       for (const b of m.content) {
         if (b.type === "tool_use") {

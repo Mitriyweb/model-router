@@ -1,4 +1,4 @@
-import { ProviderError } from "../errors";
+import { ProviderError, errorMessage } from "../errors";
 import { sanitizeToolSchema } from "../providers/schema";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
@@ -101,7 +101,41 @@ export function anthropicToolsToOpenAI(tools: ToolDefinition[]) {
   }));
 }
 
-export function openAIToolsToAnthropic(tools: any[]): ToolDefinition[] {
+/** Minimal wire shapes accepted by the OpenAI-compatible request boundary. */
+export interface OpenAITool {
+  name?: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+  function?: {
+    name?: string;
+    description?: string;
+    parameters?: Record<string, unknown>;
+  };
+}
+
+export interface OpenAIToolCall {
+  id?: string;
+  function?: { name?: string; arguments?: string };
+}
+
+export interface OpenAIMessage {
+  role?: string;
+  content?: string | null;
+  tool_calls?: OpenAIToolCall[];
+  tool_call_id?: string;
+}
+
+export interface OpenAIRequest {
+  model?: string;
+  messages: OpenAIMessage[];
+  tools?: OpenAITool[];
+  max_tokens?: number;
+  max_completion_tokens?: number;
+  temperature?: number;
+  stream?: boolean;
+}
+
+export function openAIToolsToAnthropic(tools: OpenAITool[]): ToolDefinition[] {
   if (!Array.isArray(tools)) return [];
   return tools.map((t) => ({
     name: t.function?.name ?? t.name ?? "",
@@ -110,7 +144,10 @@ export function openAIToolsToAnthropic(tools: any[]): ToolDefinition[] {
   }));
 }
 
-export function openAIRequestToNormalized(body: any, overrideModel?: string): NormalizedRequest {
+export function openAIRequestToNormalized(
+  body: OpenAIRequest,
+  overrideModel?: string,
+): NormalizedRequest {
   let systemPrompt = "";
   const messages: AnthropicMessage[] = [];
 
@@ -135,9 +172,10 @@ export function openAIRequestToNormalized(body: any, overrideModel?: string): No
           input: safeJsonParse(tc.function?.arguments ?? "{}"),
         });
       }
+      const first = content[0];
       messages.push({
         role: "assistant",
-        content: content.length === 1 && content[0].type === "text" ? content[0].text : content,
+        content: content.length === 1 && first?.type === "text" ? first.text : content,
       });
     } else if (m.role === "tool") {
       // OpenAI tool response maps to Anthropic user turn with tool_result block
@@ -349,13 +387,13 @@ export function createOpenAICompatibleStream(
           return;
         }
         await streamOpenAIToAnthropic(res, model, writer);
-      } catch (err: any) {
+      } catch (err) {
         if (signal?.aborted) return;
         const retryMs = retryAfterFromError(err);
         if (retryMs !== undefined && tier) {
           rateLimiter.markUnavailable(tier, retryMs);
         }
-        writer.error(err.message ?? String(err));
+        writer.error(errorMessage(err));
       }
     },
   });

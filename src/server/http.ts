@@ -26,8 +26,13 @@ function tooLarge(): HttpError {
   return new HttpError(413, "request body too large");
 }
 
-/** Read a JSON body with a hard size cap and gzip/deflate/br support. */
-export async function readJsonBody<T = unknown>(request: Request, format: ApiFormat): Promise<T> {
+/**
+ * Read a JSON body with a hard size cap and gzip/deflate/br support.
+ *
+ * Returns `unknown` deliberately: every caller must pass the value through a
+ * parser in `server/parsers.ts` before any field is accessed.
+ */
+export async function readJsonBody(request: Request, format: ApiFormat): Promise<unknown> {
   const limit = config.maxRequestBodySize;
   const declared = Number(request.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > limit) throw tooLarge();
@@ -67,7 +72,7 @@ export async function readJsonBody<T = unknown>(request: Request, format: ApiFor
   if (raw.byteLength > limit) throw tooLarge();
 
   try {
-    return JSON.parse(raw.toString("utf8")) as T;
+    return JSON.parse(raw.toString("utf8"));
   } catch {
     const message = format === "openai" ? "Invalid JSON body" : "invalid JSON body";
     throw new HttpError(400, message);

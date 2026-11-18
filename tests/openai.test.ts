@@ -39,7 +39,7 @@ describe("OpenAI compatibility and streaming", () => {
     const normalized = openAIRequestToNormalized(openAIReq);
     expect(normalized.systemPrompt).toBe("You are an assistant.");
     expect(normalized.messages).toHaveLength(1);
-    expect(normalized.messages[0].content).toBe("Hello!");
+    expect(normalized.messages[0]?.content).toBe("Hello!");
     expect(normalized.stream).toBe(true);
     expect(normalized.temperature).toBe(0.5);
   });
@@ -58,8 +58,8 @@ describe("OpenAI compatibility and streaming", () => {
     const openAIJson = anthropicResponseToOpenAI(anthropicResp, "model-router-auto");
     expect(openAIJson.id).toBe("chatcmpl-msg_abc123");
     expect(openAIJson.object).toBe("chat.completion");
-    expect(openAIJson.choices[0].message.content).toBe("Hello from model!");
-    expect(openAIJson.choices[0].finish_reason).toBe("stop");
+    expect(openAIJson.choices[0]?.message.content).toBe("Hello from model!");
+    expect(openAIJson.choices[0]?.finish_reason).toBe("stop");
     expect(openAIJson.usage.total_tokens).toBe(20);
   });
 
@@ -111,7 +111,7 @@ describe("OpenAI compatibility and streaming", () => {
     ];
 
     const openAITools = anthropicToolsToOpenAI(tools as any);
-    expect(openAITools[0].function.parameters).toEqual({
+    expect(openAITools[0]?.function.parameters).toEqual({
       type: "object",
       properties: {
         after: {

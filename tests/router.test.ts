@@ -160,7 +160,10 @@ describe("router", () => {
       await expect(routeRequest(req)).resolves.toMatchObject({ tierUsed: "groq" });
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
       expect(body.max_tokens).toBe(4096);
-      expect(body.messages[1].content.length).toBeLessThan(req.messages[0].content.length);
+      const originalContent = req.messages[0]?.content;
+      expect(body.messages[1]?.content.length).toBeLessThan(
+        typeof originalContent === "string" ? originalContent.length : 0,
+      );
     } finally {
       globalThis.fetch = originalFetch;
       config.groq.apiKey = originalApiKey;
@@ -375,7 +378,7 @@ describe("router", () => {
     config.cacheDisabled = true;
 
     try {
-      expect(POLICIES[0].match(req)).toBe(false);
+      expect(POLICIES[0]?.match(req)).toBe(false);
     } finally {
       config.cacheDisabled = previous;
     }

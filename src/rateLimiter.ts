@@ -277,28 +277,25 @@ export function retryAfterFromHeaders(headers?: Headers): number | undefined {
 }
 
 export function retryAfterFromError(err: unknown): number | undefined {
-  if (err && typeof err === "object" && "headers" in err && (err as any).headers) {
-    const headerRetry = retryAfterFromHeaders((err as any).headers);
+  const record = err !== null && typeof err === "object" ? err : undefined;
+
+  if (record && "headers" in record && record.headers instanceof Headers) {
+    const headerRetry = retryAfterFromHeaders(record.headers);
     if (headerRetry !== undefined) return headerRetry;
   }
-  if (
-    err &&
-    typeof err === "object" &&
-    "retryAfterMs" in err &&
-    typeof (err as any).retryAfterMs === "number"
-  ) {
-    return (err as any).retryAfterMs;
+  if (record && "retryAfterMs" in record && typeof record.retryAfterMs === "number") {
+    return record.retryAfterMs;
   }
 
   const message = err instanceof Error ? err.message : String(err);
+  const status = record && "status" in record ? record.status : undefined;
   const isRateLimitSignal =
     /resource has been exhausted|resource_exhausted|quota exceeded|quota|exhausted|rate limit|too many requests|rate_limit_exceeded|tokens per minute|tpm.*limit|limit .* requested .* try again|out of credit|credit limit|overloaded/i.test(
       message,
     ) ||
-    (err &&
-      typeof err === "object" &&
-      "status" in err &&
-      ((err as any).status === 429 || (err as any).status === 413 || (err as any).status === 503));
+    status === 429 ||
+    status === 413 ||
+    status === 503;
 
   if (!isRateLimitSignal) return undefined;
 

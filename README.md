@@ -26,7 +26,25 @@ Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **
 1. **Anthropic API** (`POST /v1/messages`): For Claude Code, Agent Team, and Anthropic clients.
 2. **OpenAI API** (`POST /v1/chat/completions` & `GET /v1/models`): For ZeroClaw, Aider, Cline, Roo Code, Cursor, Continue.dev, mini-agent, and Web Chat interfaces.
 
-Both endpoints also accept gzip-compressed request bodies — send `Content-Encoding: gzip` with a gzipped JSON payload to reduce upload size on large prompts.
+Both endpoints accept compressed request bodies — send `Content-Encoding: gzip`, `deflate`, or `br` with a compressed JSON payload to reduce upload size on large prompts. Decompressed bodies are capped by `ROUTER_MAX_BODY_BYTES` (default: 1 MiB).
+
+---
+
+## Endpoints & Runtime Configuration
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /v1/messages` | Anthropic Messages API |
+| `POST /v1/chat/completions` | OpenAI Chat Completions API |
+| `GET /v1/models` | OpenAI-style model list |
+| `GET /v1/providers` | Provider registry with credentials/status |
+| `GET /status` | Per-tier rate-limit snapshot and cache statistics |
+| `GET /health` | Health check |
+| `POST /reset`, `/reset-state`, `/v1/reset` | Reset rate-limiter state (requires `ROUTER_AUTH_TOKEN`) |
+
+Per-provider routes are also available: `POST /v1/providers/{provider}/messages` and `POST /v1/providers/{provider}/chat/completions`, where `{provider}` is any registered tier (for example `groq`). The same tier can be selected with the `x-router-provider` / `x-router-tier` header or with a provider-prefixed model name such as `groq/llama-3.3-70b-versatile`. `x-router-private: true` restricts routing to the local tier, and `x-router-auth-token` is accepted on the reset endpoints. Every response carries `x-request-id` and `x-router-tier`.
+
+Copy `.env.example` to `.env` to configure providers and router behavior. The generated example is the source of truth for all supported variables; the most relevant router settings are `FALLBACK_ORDER`, `ROUTER_STRICT_FALLBACK_ORDER`, `ROUTER_DISABLE_CACHE`, `ROUTER_CACHE_TTL_MS`, `ROUTER_CACHE_MAX_ENTRIES`, `ROUTER_HOST`, `PORT`, `ROUTER_AUTH_TOKEN`, `ROUTER_MAX_BODY_BYTES`, `ROUTER_CORS_ORIGIN`, `ROUTER_MAX_CONTEXT_TOKENS`, and `RATE_LIMIT_STATE_FILE`. Run `model-router --help` for a compact reference.
 
 ---
 
@@ -243,8 +261,14 @@ data: {"type":"message_stop"}
 # Run with hot reloading
 bun run dev
 
-# Run complete validation (typecheck + lint + tests)
+# Run complete validation (strict typecheck + lint + tests + generated env check)
 bun run validate
+
+# Validate and also build a standalone binary
+bun run verify
+
+# Regenerate .env.example after changing src/providers/definitions.ts
+bun run env:generate
 
 # Run live E2E adapter tests against configured provider APIs (.env)
 bun run test:e2e

@@ -1,4 +1,5 @@
 import { config } from "../config";
+import { errorMessage } from "../errors";
 import { sanitizeToolSchema } from "../providers/schema";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
@@ -217,12 +218,12 @@ export const geminiAdapter: ProviderAdapter = {
           }
 
           writer.end(sawFunctionCall ? "tool_use" : "end_turn", inputTokens, outputTokens);
-        } catch (err: any) {
+        } catch (err) {
           const retryMs = retryAfterFromError(err);
           if (retryMs !== undefined) {
             rateLimiter.markUnavailable("gemini", retryMs);
           }
-          writer.error(err.message ?? String(err));
+          writer.error(errorMessage(err));
         }
       },
     });

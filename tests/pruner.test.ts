@@ -36,12 +36,10 @@ describe("pruner", () => {
     expect(pruned.messages.length).toBeLessThan(messages.length);
     expect(pruned.systemPrompt).toBe(req.systemPrompt);
     // Preserves recent messages role and content prefix/suffix
-    expect(pruned.messages[pruned.messages.length - 1].role).toBe(
-      messages[messages.length - 1].role,
-    );
-    expect(pruned.messages[pruned.messages.length - 1].content).toContain(
-      "This is message number 20",
-    );
+    const lastPruned = pruned.messages[pruned.messages.length - 1];
+    const lastOriginal = messages[messages.length - 1];
+    expect(lastPruned?.role).toBe(lastOriginal?.role);
+    expect(lastPruned?.content).toContain("This is message number 20");
   });
 
   it("preserves tool call sequences during pruning", () => {
@@ -90,7 +88,7 @@ describe("pruner", () => {
 
     const pruned = pruneNormalizedRequest(req, 8000);
     expect(pruned.messages.length).toBe(1);
-    expect(typeof pruned.messages[0].content).toBe("string");
-    expect(pruned.messages[0].content).toContain("[...content pruned...]");
+    expect(typeof pruned.messages[0]?.content).toBe("string");
+    expect(pruned.messages[0]?.content).toContain("[...content pruned...]");
   });
 });

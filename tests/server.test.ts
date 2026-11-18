@@ -273,10 +273,7 @@ describe("HTTP body decoding", () => {
       ["deflate", deflateSync(json)],
       ["br", brotliCompressSync(json)],
     ] as const) {
-      const decoded = await readJsonBody<{ ok: boolean; value: string }>(
-        makeRequest(compressed, encoding),
-        "anthropic",
-      );
+      const decoded = await readJsonBody(makeRequest(compressed, encoding), "anthropic");
       expect(decoded).toEqual(payload);
     }
   });

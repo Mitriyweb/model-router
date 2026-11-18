@@ -16,6 +16,7 @@ import {
   readJsonBody,
   withContextHeaders,
 } from "./http";
+import { parseAnthropicRequest, parseOpenAIRequest } from "./parsers";
 
 export function isValidTier(tier?: string | null): tier is TierName {
   if (!tier) return false;
@@ -98,10 +99,7 @@ async function handleStreamingMessages(
 export async function handleMessages(ctx: RequestContext, forceTier?: TierName): Promise<Response> {
   ctx.format = "anthropic";
   try {
-    const body = await readJsonBody<AnthropicRequest>(ctx.request, ctx.format);
-    if (!body || typeof body !== "object") {
-      throw new HttpError(400, "invalid JSON body");
-    }
+    const body = parseAnthropicRequest(await readJsonBody(ctx.request, ctx.format), ctx.format);
 
     const targetTier = forceTier ?? parseTierHeader(ctx);
     const forcePrivate = ctx.request.headers.get("x-router-private") === "true";
@@ -135,12 +133,9 @@ export async function handleChatCompletions(
 ): Promise<Response> {
   ctx.format = "openai";
   try {
-    const body = await readJsonBody<Record<string, any>>(ctx.request, ctx.format);
-    if (!body || typeof body !== "object" || !Array.isArray(body.messages)) {
-      throw new HttpError(400, "Invalid JSON body");
-    }
+    const body = parseOpenAIRequest(await readJsonBody(ctx.request, ctx.format));
 
-    const requestedModel = body.model as string | undefined;
+    const requestedModel = body.model;
     const { tier: tierOverride, cleanModel } = parseModelTierOverride(requestedModel);
     const headerTier = parseTierHeader(ctx);
     const targetTier = forceTier ?? headerTier ?? tierOverride;

@@ -1,12 +1,9 @@
 {
   "name": "model-router",
   "version": "0.1.17",
-  "description": "Anthropic-compatible proxy for free-tier and local LLMs (Groq, Gemini Flash, OpenRouter, Ollama)",
+  "description": "Universal proxy with Anthropic and OpenAI APIs for 10 free-tier and local LLM providers, with automatic fallback, caching and rate limiting",
   "main": "src/index.ts",
   "type": "module",
-  "bin": {
-    "model-router": "./src/index.ts"
-  },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
@@ -45,14 +42,26 @@
   },
   "keywords": [
     "anthropic",
+    "openai",
     "claude",
     "claude-code",
+    "codex",
+    "aider",
+    "cline",
+    "zeroclaw",
     "llm",
     "proxy",
     "router",
+    "sse",
+    "cerebras",
     "groq",
     "gemini",
     "openrouter",
+    "mistral",
+    "nvidia",
+    "huggingface",
+    "cloudflare",
+    "cohere",
     "ollama"
   ],
   "author": "Mitriyweb",

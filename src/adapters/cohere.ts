@@ -1,4 +1,5 @@
 import { config } from "../config";
+import { errorMessage } from "../errors";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
 import { iterateSSE } from "../streaming/sse";
@@ -216,12 +217,12 @@ export const cohereAdapter: ProviderAdapter = {
           }
 
           writer.end(sawTool ? "tool_use" : "end_turn", inputTokens, outputTokens);
-        } catch (err: any) {
+        } catch (err) {
           const retryMs = retryAfterFromError(err);
           if (retryMs !== undefined) {
             rateLimiter.markUnavailable("cohere", retryMs);
           }
-          writer.error(err.message ?? String(err));
+          writer.error(errorMessage(err));
         }
       },
     });

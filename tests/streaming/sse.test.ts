@@ -43,7 +43,7 @@ describe("SSE utilities", () => {
   it("joins multiple data lines per frame", () => {
     const { events } = parseSSEFrames("data: line one\ndata: line two\n\n");
 
-    expect(events[0].data).toBe("line one\nline two");
+    expect(events[0]?.data).toBe("line one\nline two");
   });
 
   it("iterates a stream split across arbitrary chunk boundaries", async () => {
