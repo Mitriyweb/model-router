@@ -23,6 +23,8 @@ export interface ValidatedConfig {
   cacheDisabled: boolean;
   cacheTtlMs: number;
   cacheMaxEntries: number;
+  maxRequestBodySize: number;
+  corsOrigin: string;
   routerMaxContextTokens: number;
   providers: Record<TierName, ProviderConfig>;
   /** Non-fatal issues, e.g. unknown fallback tiers skipped in permissive mode. */
@@ -85,6 +87,21 @@ function validateUrl(env: EnvReader, name: string, errors: string[]): void {
   } catch {
     errors.push(`${name} must be a valid URL (got "${raw}")`);
   }
+}
+
+function parseCorsOrigin(env: EnvReader, errors: string[]): string {
+  const raw = env("ROUTER_CORS_ORIGIN")?.trim() ?? "";
+  if (!raw || raw === "*") return raw;
+
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      errors.push(`ROUTER_CORS_ORIGIN must use http or https (got "${url.protocol}")`);
+    }
+  } catch {
+    errors.push(`ROUTER_CORS_ORIGIN must be "*" or a valid URL (got "${raw}")`);
+  }
+  return raw;
 }
 
 function parseFallbackOrder(
@@ -166,6 +183,15 @@ export function validateConfigEnv(source: EnvSource = process.env): ValidatedCon
   const cacheDisabled = parseBoolean(env, "ROUTER_DISABLE_CACHE", errors);
   const cacheTtlMs = parseInteger(env, "ROUTER_CACHE_TTL_MS", 600_000, 1, 86_400_000, errors);
   const cacheMaxEntries = parseInteger(env, "ROUTER_CACHE_MAX_ENTRIES", 500, 1, 100_000, errors);
+  const maxRequestBodySize = parseInteger(
+    env,
+    "ROUTER_MAX_BODY_BYTES",
+    1_048_576,
+    1_024,
+    100_000_000,
+    errors,
+  );
+  const corsOrigin = parseCorsOrigin(env, errors);
   const routerMaxContextTokens = parseInteger(
     env,
     "ROUTER_MAX_CONTEXT_TOKENS",
@@ -197,6 +223,8 @@ export function validateConfigEnv(source: EnvSource = process.env): ValidatedCon
     cacheDisabled,
     cacheTtlMs,
     cacheMaxEntries,
+    maxRequestBodySize,
+    corsOrigin,
     routerMaxContextTokens,
     providers,
     warnings,

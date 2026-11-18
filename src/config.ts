@@ -17,6 +17,8 @@ export interface Config extends Record<TierName, ProviderConfig> {
   cacheDisabled: boolean;
   cacheTtlMs: number;
   cacheMaxEntries: number;
+  maxRequestBodySize: number;
+  corsOrigin: string;
   routerMaxContextTokens: number;
 }
 
@@ -36,6 +38,8 @@ export const config: Config = {
   cacheDisabled: validated.cacheDisabled,
   cacheTtlMs: validated.cacheTtlMs,
   cacheMaxEntries: validated.cacheMaxEntries,
+  maxRequestBodySize: validated.maxRequestBodySize,
+  corsOrigin: validated.corsOrigin,
   routerMaxContextTokens: validated.routerMaxContextTokens,
   ...validated.providers,
 };

@@ -1,6 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { brotliCompressSync, deflateSync, gzipSync } from "node:zlib";
 import { openAIRequestToNormalized } from "../src/adapters/openaiCompatible";
+import { config } from "../src/config";
 import { parseModelTierOverride, startServer } from "../src/server";
+import { HttpError, readJsonBody } from "../src/server/http";
 
 describe("Server API Endpoints & Provider Specific Routing", () => {
   test("parseModelTierOverride parses provider prefixes and preserves nested model IDs", () => {
@@ -175,5 +178,173 @@ describe("Server API Endpoints & Provider Specific Routing", () => {
       }),
     });
     expect(res.status).toBe(502);
+  });
+
+  test("responses carry a request id", async () => {
+    const res = await fetch(`${baseUrl}/health`);
+    expect(res.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  test("known paths return 405 with Allow and a format-specific error", async () => {
+    const anthropic = await fetch(`${baseUrl}/v1/messages`, { method: "GET" });
+    expect(anthropic.status).toBe(405);
+    expect(anthropic.headers.get("allow")).toBe("POST");
+    expect(await anthropic.json()).toEqual({ error: "method not allowed" });
+
+    const openai = await fetch(`${baseUrl}/v1/models`, { method: "POST" });
+    expect(openai.status).toBe(405);
+    expect(openai.headers.get("allow")).toBe("GET");
+    expect(await openai.json()).toEqual({
+      error: { message: "method not allowed", type: "invalid_request_error" },
+    });
+  });
+
+  test("invalid JSON keeps the existing per-protocol envelopes", async () => {
+    const anthropic = await fetch(`${baseUrl}/v1/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+    expect(anthropic.status).toBe(400);
+    expect(await anthropic.json()).toEqual({ error: "invalid JSON body" });
+
+    const openai = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+    expect(openai.status).toBe(400);
+    expect(await openai.json()).toEqual({
+      error: { message: "Invalid JSON body", type: "invalid_request_error" },
+    });
+  });
+
+  test("oversized bodies return 413 in the endpoint envelope", async () => {
+    const original = config.maxRequestBodySize;
+    config.maxRequestBodySize = 32;
+    try {
+      const res = await fetch(`${baseUrl}/v1/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: "x".repeat(100) }] }),
+      });
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({
+        error: { message: "request body too large", type: "invalid_request_error" },
+      });
+
+      const anthropic = await fetch(`${baseUrl}/v1/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: "x".repeat(100) }] }),
+      });
+      expect(anthropic.status).toBe(413);
+      expect(await anthropic.json()).toEqual({ error: "request body too large" });
+    } finally {
+      config.maxRequestBodySize = original;
+    }
+  });
+});
+
+describe("HTTP body decoding", () => {
+  const originalLimit = config.maxRequestBodySize;
+
+  afterAll(() => {
+    config.maxRequestBodySize = originalLimit;
+  });
+
+  function makeRequest(body: Uint8Array, encoding?: string): Request {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (encoding) headers["Content-Encoding"] = encoding;
+    return new Request("http://localhost/v1/messages", {
+      method: "POST",
+      headers,
+      body: body as BodyInit,
+    });
+  }
+
+  test("accepts gzip, deflate and br payloads", async () => {
+    config.maxRequestBodySize = 1_024;
+    const payload = { ok: true, value: "hello" };
+    const json = Buffer.from(JSON.stringify(payload));
+
+    for (const [encoding, compressed] of [
+      ["gzip", gzipSync(json)],
+      ["deflate", deflateSync(json)],
+      ["br", brotliCompressSync(json)],
+    ] as const) {
+      const decoded = await readJsonBody<{ ok: boolean; value: string }>(
+        makeRequest(compressed, encoding),
+        "anthropic",
+      );
+      expect(decoded).toEqual(payload);
+    }
+  });
+
+  test("rejects decompressed bodies that exceed the cap", async () => {
+    config.maxRequestBodySize = 256;
+    const compressed = gzipSync(Buffer.from(JSON.stringify({ data: "x".repeat(100_000) })));
+    expect(compressed.byteLength).toBeLessThan(config.maxRequestBodySize);
+
+    let error: unknown;
+    try {
+      await readJsonBody(makeRequest(compressed, "gzip"), "anthropic");
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(HttpError);
+    expect((error as HttpError).status).toBe(413);
+  });
+
+  test("rejects unknown content encodings", async () => {
+    config.maxRequestBodySize = 1_024;
+    let error: unknown;
+    try {
+      await readJsonBody(makeRequest(Buffer.from("{}"), "zip"), "anthropic");
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(HttpError);
+    expect((error as HttpError).status).toBe(400);
+  });
+});
+
+describe("CORS middleware", () => {
+  const originalOrigin = config.corsOrigin;
+  let server: ReturnType<typeof startServer>;
+  let baseUrl: string;
+
+  beforeAll(() => {
+    config.corsOrigin = "https://example.com";
+    server = startServer(0);
+    baseUrl = `http://localhost:${server.port}`;
+  });
+
+  afterAll(() => {
+    config.corsOrigin = originalOrigin;
+    server.stop();
+  });
+
+  test("adds CORS headers to regular responses", async () => {
+    const res = await fetch(`${baseUrl}/health`, {
+      headers: { Origin: "https://example.com" },
+    });
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://example.com");
+    expect(res.headers.get("vary")).toBe("Origin");
+  });
+
+  test("answers preflight requests for known paths", async () => {
+    const res = await fetch(`${baseUrl}/v1/messages`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://example.com",
+        "Access-Control-Request-Method": "POST",
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-methods")).toContain("POST");
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://example.com");
   });
 });

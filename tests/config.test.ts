@@ -11,6 +11,8 @@ describe("config validation", () => {
     expect(result.authToken).toBeUndefined();
     expect(result.cacheTtlMs).toBe(600_000);
     expect(result.cacheMaxEntries).toBe(500);
+    expect(result.maxRequestBodySize).toBe(1_048_576);
+    expect(result.corsOrigin).toBe("");
     expect(result.fallbackOrder).toEqual(VALID_TIERS);
     expect(Object.keys(result.providers)).toEqual(VALID_TIERS);
     expect(result.providers.cerebras.model).toBe("llama-3.3-70b");
@@ -23,6 +25,8 @@ describe("config validation", () => {
       validateConfigEnv({
         PORT: "not-a-port",
         ROUTER_DISABLE_CACHE: "maybe",
+        ROUTER_MAX_BODY_BYTES: "0",
+        ROUTER_CORS_ORIGIN: "ftp://example.com",
         GROQ_TPM: "-1",
       });
     } catch (err) {
@@ -33,6 +37,8 @@ describe("config validation", () => {
     expect(error?.message).toContain("Invalid configuration:");
     expect(error?.message).toContain("PORT must be an integer");
     expect(error?.message).toContain("ROUTER_DISABLE_CACHE must be one of");
+    expect(error?.message).toContain("ROUTER_MAX_BODY_BYTES must be at least 1024");
+    expect(error?.message).toContain("ROUTER_CORS_ORIGIN must use http or https");
     expect(error?.message).toContain("GROQ_TPM must be at least 0");
   });
 
