@@ -167,6 +167,7 @@ Key settings:
 FALLBACK_ORDER=cerebras,groq,gemini,openrouter,mistral,nvidia,huggingface,cloudflare,cohere,local
 PORT=8787
 ROUTER_HOST=127.0.0.1
+LOG_LEVEL=info
 ROUTER_STRICT_FALLBACK_ORDER=false
 ROUTER_DISABLE_CACHE=false
 ROUTER_CACHE_TTL_MS=600000
@@ -177,6 +178,8 @@ ROUTER_AUTH_TOKEN=
 ROUTER_MAX_CONTEXT_TOKENS=128000
 RATE_LIMIT_STATE_FILE=.router-state.json
 ```
+
+`LOG_LEVEL` accepts `debug`, `info` (default), `warn`, `error` or `silent`. Logging goes to the process stdout/stderr; a detached binary keeps writing to the terminal or file descriptor it was started with.
 
 ## Project Links
 

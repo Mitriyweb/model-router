@@ -61,6 +61,7 @@ Router settings:
   ROUTER_STRICT_FALLBACK_ORDER  Fail on unknown tiers instead of skipping them
   PORT                       Port to listen on (default: 8787)
   ROUTER_HOST                Bind address (default: 127.0.0.1)
+  LOG_LEVEL                  debug | info | warn | error | silent (default: info)
   ROUTER_AUTH_TOKEN          Bearer token required for /reset endpoints
   ROUTER_DISABLE_CACHE       Disable the exact-repeat cache (true/false)
   ROUTER_CACHE_TTL_MS        Cache entry TTL (default: 600000)

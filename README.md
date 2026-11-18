@@ -44,7 +44,9 @@ Both endpoints accept compressed request bodies — send `Content-Encoding: gzip
 
 Per-provider routes are also available: `POST /v1/providers/{provider}/messages` and `POST /v1/providers/{provider}/chat/completions`, where `{provider}` is any registered tier (for example `groq`). The same tier can be selected with the `x-router-provider` / `x-router-tier` header or with a provider-prefixed model name such as `groq/llama-3.3-70b-versatile`. `x-router-private: true` restricts routing to the local tier, and `x-router-auth-token` is accepted on the reset endpoints. Every response carries `x-request-id` and `x-router-tier`.
 
-Copy `.env.example` to `.env` to configure providers and router behavior. The generated example is the source of truth for all supported variables; the most relevant router settings are `FALLBACK_ORDER`, `ROUTER_STRICT_FALLBACK_ORDER`, `ROUTER_DISABLE_CACHE`, `ROUTER_CACHE_TTL_MS`, `ROUTER_CACHE_MAX_ENTRIES`, `ROUTER_HOST`, `PORT`, `ROUTER_AUTH_TOKEN`, `ROUTER_MAX_BODY_BYTES`, `ROUTER_CORS_ORIGIN`, `ROUTER_MAX_CONTEXT_TOKENS`, and `RATE_LIMIT_STATE_FILE`. Run `model-router --help` for a compact reference.
+Copy `.env.example` to `.env` to configure providers and router behavior. The generated example is the source of truth for all supported variables; the most relevant router settings are `FALLBACK_ORDER`, `ROUTER_STRICT_FALLBACK_ORDER`, `ROUTER_DISABLE_CACHE`, `ROUTER_CACHE_TTL_MS`, `ROUTER_CACHE_MAX_ENTRIES`, `ROUTER_HOST`, `PORT`, `LOG_LEVEL`, `ROUTER_AUTH_TOKEN`, `ROUTER_MAX_BODY_BYTES`, `ROUTER_CORS_ORIGIN`, `ROUTER_MAX_CONTEXT_TOKENS`, and `RATE_LIMIT_STATE_FILE`. Run `model-router --help` for a compact reference.
+
+Startup, routing and warning messages are written to stdout/stderr at `LOG_LEVEL=info` (the default). Set `LOG_LEVEL=debug` for more detail or `LOG_LEVEL=silent` to disable logging. If you run the binary with its stdout redirected to a file or launch it detached, check that destination — the process is still logging there.
 
 ---
 

@@ -402,10 +402,11 @@
   </div>
   <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin-top:1rem">
     <div style="font-weight:600;margin-bottom:0.6rem">Runtime configuration</div>
-    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem">Both request APIs accept <code style="color:#e06c75">gzip</code>, <code style="color:#e06c75">deflate</code>, and <code style="color:#e06c75">br</code> bodies, capped after decompression by <code style="color:#e06c75">ROUTER_MAX_BODY_BYTES</code>. Copy <code style="color:#e06c75">.env.example</code> to <code style="color:#e06c75">.env</code> to configure providers and router behavior.</p>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem">Both request APIs accept <code style="color:#e06c75">gzip</code>, <code style="color:#e06c75">deflate</code>, and <code style="color:#e06c75">br</code> bodies, capped after decompression by <code style="color:#e06c75">ROUTER_MAX_BODY_BYTES</code>. Copy <code style="color:#e06c75">.env.example</code> to <code style="color:#e06c75">.env</code> to configure providers and router behavior. Logs go to stdout/stderr; <code style="color:#e06c75">LOG_LEVEL=info</code> (default) prints startup and routing messages, <code style="color:#e06c75">debug</code> adds detail, and <code style="color:#e06c75">silent</code> disables them.</p>
     <div class="code-block" style="margin-bottom:0">
       <span class="val">FALLBACK_ORDER</span>=cerebras,groq,gemini,openrouter,mistral,nvidia,huggingface,cloudflare,cohere,local<br>
       <span class="val">ROUTER_HOST</span>=127.0.0.1<br>
+      <span class="val">LOG_LEVEL</span>=info<br>
       <span class="val">ROUTER_DISABLE_CACHE</span>=false<br>
       <span class="val">ROUTER_CACHE_TTL_MS</span>=600000
     </div>
@@ -464,7 +465,7 @@
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
       <div style="font-weight:600;margin-bottom:0.6rem">Why does it show "Opus 5"?</div>
       <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6">Claude Code's UI displays its own model labels regardless of the backend. Your requests are actually processed by whichever free provider is active (Mistral, Groq, etc.).</p>
-      <p style="font-size:0.83rem;color:var(--text-muted);margin-top:0.6rem">To verify, check the <strong style="color:var(--accent2)">bun run dev</strong> terminal — it logs <code style="color:#e06c75">[router] streaming via mistral</code> for every request.</p>
+      <p style="font-size:0.83rem;color:var(--text-muted);margin-top:0.6rem">To verify, check the process terminal or log file — it logs <code style="color:#e06c75">[router] streaming via mistral</code> for every request when <code style="color:#e06c75">LOG_LEVEL=info</code> or <code style="color:#e06c75">debug</code>.</p>
     </div>
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
       <div style="font-weight:600;margin-bottom:0.6rem">How to verify the active provider?</div>
