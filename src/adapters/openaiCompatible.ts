@@ -1,5 +1,8 @@
+import { ProviderError } from "../errors";
+import { sanitizeToolSchema } from "../providers/schema";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
+import { iterateSSE } from "../streaming/sse";
 import type {
   AnthropicMessage,
   AnthropicResponse,
@@ -9,17 +12,7 @@ import type {
   ToolDefinition,
 } from "../types";
 
-export class ProviderError extends Error {
-  headers?: Headers;
-  status: number;
-
-  constructor(message: string, status: number, headers?: Headers) {
-    super(message);
-    this.name = "ProviderError";
-    this.status = status;
-    this.headers = headers;
-  }
-}
+export { ProviderError };
 
 export async function readProviderError(
   res: Response,
@@ -95,73 +88,7 @@ export function fitsOpenAICompatibleContext(
   return estimatedTokens <= maxContext;
 }
 
-export function sanitizeOpenAICompatibleSchema(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeOpenAICompatibleSchema(item));
-  }
-
-  if (value && typeof value === "object") {
-    const cleaned: Record<string, unknown> = {};
-    for (const [key, innerValue] of Object.entries(value as Record<string, unknown>)) {
-      if (
-        [
-          "$schema",
-          "$defs",
-          "definitions",
-          "additionalProperties",
-          "propertyNames",
-          "const",
-          "exclusiveMinimum",
-          "exclusiveMaximum",
-          "default",
-          "examples",
-          "deprecated",
-          "readOnly",
-          "writeOnly",
-          "nullable",
-          "title",
-          "description",
-          "format",
-          "contentEncoding",
-          "contentMediaType",
-          "pattern",
-          "anyOf",
-          "allOf",
-          "oneOf",
-          "any_of",
-          "all_of",
-          "one_of",
-          "not",
-        ].includes(key)
-      ) {
-        continue;
-      }
-
-      cleaned[key] = sanitizeOpenAICompatibleSchema(innerValue);
-    }
-
-    if (cleaned.properties && typeof cleaned.properties === "object") {
-      const properties = Object.fromEntries(
-        Object.entries(cleaned.properties as Record<string, unknown>).map(([name, schema]) => [
-          name,
-          sanitizeOpenAICompatibleSchema(schema),
-        ]),
-      );
-      cleaned.properties = properties;
-
-      if (Array.isArray(cleaned.required)) {
-        const valid = new Set(Object.keys(properties));
-        cleaned.required = cleaned.required.filter(
-          (item) => typeof item === "string" && valid.has(item),
-        );
-      }
-    }
-
-    return cleaned;
-  }
-
-  return value;
-}
+export { sanitizeToolSchema as sanitizeOpenAICompatibleSchema };
 
 export function anthropicToolsToOpenAI(tools: ToolDefinition[]) {
   return tools.map((t) => ({
@@ -169,7 +96,7 @@ export function anthropicToolsToOpenAI(tools: ToolDefinition[]) {
     function: {
       name: t.name,
       description: t.description ?? "",
-      parameters: sanitizeOpenAICompatibleSchema(t.input_schema),
+      parameters: sanitizeToolSchema(t.input_schema),
     },
   }));
 }
@@ -453,69 +380,53 @@ export async function streamOpenAIToAnthropic(
   let inputTokens: number | undefined;
   let outputTokens: number | undefined;
 
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
+  for await (const { data } of iterateSSE(upstream.body)) {
+    if (data === "[DONE]") continue;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    let chunk: any;
+    try {
+      chunk = JSON.parse(data);
+    } catch {
+      continue;
+    }
 
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+    const delta = chunk.choices?.[0]?.delta;
+    if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+    if (chunk.usage?.prompt_tokens) inputTokens = chunk.usage.prompt_tokens;
+    if (chunk.usage?.completion_tokens) outputTokens = chunk.usage.completion_tokens;
+    if (!delta) continue;
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) continue;
-      const payload = trimmed.slice(5).trim();
-      if (payload === "[DONE]") continue;
-
-      let chunk: any;
-      try {
-        chunk = JSON.parse(payload);
-      } catch {
-        continue;
+    const contentDelta = delta.content || delta.reasoning || delta.reasoning_content;
+    if (contentDelta) {
+      if (activeToolIndex !== null) {
+        writer.stopBlock();
+        activeToolIndex = null;
       }
+      if (!textBlockOpen) {
+        writer.startText();
+        textBlockOpen = true;
+      }
+      writer.textDelta(contentDelta);
+    }
 
-      const delta = chunk.choices?.[0]?.delta;
-      if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
-      if (chunk.usage?.prompt_tokens) inputTokens = chunk.usage.prompt_tokens;
-      if (chunk.usage?.completion_tokens) outputTokens = chunk.usage.completion_tokens;
-      if (!delta) continue;
-
-      const contentDelta = delta.content || delta.reasoning || delta.reasoning_content;
-      if (contentDelta) {
-        if (activeToolIndex !== null) {
+    for (const call of delta.tool_calls ?? []) {
+      const idx: number = call.index ?? 0;
+      if (!toolBlocks.has(idx)) {
+        if (textBlockOpen) {
           writer.stopBlock();
-          activeToolIndex = null;
+          textBlockOpen = false;
         }
-        if (!textBlockOpen) {
-          writer.startText();
-          textBlockOpen = true;
+        if (activeToolIndex !== null && activeToolIndex !== idx) {
+          writer.stopBlock();
         }
-        writer.textDelta(contentDelta);
+        const id = call.id ?? crypto.randomUUID();
+        const name = call.function?.name ?? "";
+        writer.startTool(id, name);
+        toolBlocks.set(idx, { id, name });
+        activeToolIndex = idx;
       }
-
-      for (const call of delta.tool_calls ?? []) {
-        const idx: number = call.index ?? 0;
-        if (!toolBlocks.has(idx)) {
-          if (textBlockOpen) {
-            writer.stopBlock();
-            textBlockOpen = false;
-          }
-          if (activeToolIndex !== null && activeToolIndex !== idx) {
-            writer.stopBlock();
-          }
-          const id = call.id ?? crypto.randomUUID();
-          const name = call.function?.name ?? "";
-          writer.startTool(id, name);
-          toolBlocks.set(idx, { id, name });
-          activeToolIndex = idx;
-        }
-        const args = call.function?.arguments;
-        if (args) writer.toolInputDelta(args);
-      }
+      const args = call.function?.arguments;
+      if (args) writer.toolInputDelta(args);
     }
   }
 

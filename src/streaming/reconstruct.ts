@@ -1,4 +1,5 @@
 import type { AnthropicResponse, ContentBlock } from "../types";
+import { parseSSEFrames } from "./sse";
 
 /**
  * Wraps a stream of Anthropic-format SSE bytes: forwards every chunk to
@@ -103,20 +104,13 @@ export function reconstructingStream(
       controller.enqueue(chunk);
       buffer += decoder.decode(chunk, { stream: true });
 
-      const events = buffer.split("\n\n");
-      buffer = events.pop() ?? "";
+      const { events, rest } = parseSSEFrames(buffer);
+      buffer = rest;
 
-      for (const raw of events) {
-        let eventName = "";
-        let dataLine = "";
-        for (const line of raw.split("\n")) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith("event:")) eventName = trimmed.slice(6).trim();
-          else if (trimmed.startsWith("data:")) dataLine = trimmed.slice(5).trim();
-        }
-        if (!eventName || !dataLine) continue;
+      for (const { event, data } of events) {
+        if (!event) continue;
         try {
-          handleEvent(eventName, JSON.parse(dataLine));
+          handleEvent(event, JSON.parse(data));
         } catch {
           // malformed SSE frame — skip it, don't kill the pass-through
         }

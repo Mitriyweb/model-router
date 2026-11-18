@@ -1,6 +1,7 @@
 import { gunzipSync } from "node:zlib";
 import { anthropicResponseToOpenAI, openAIRequestToNormalized } from "./adapters/openaiCompatible";
 import { config } from "./config";
+import { log } from "./log";
 import { rateLimiter } from "./rateLimiter";
 import { hasCredentials, routeRequest, routeRequestStream } from "./router";
 import { anthropicStreamToOpenAI } from "./streaming/openaiSSE";
@@ -52,10 +53,10 @@ async function handleMessages(request: Request, forceTier?: TierName): Promise<R
     const skippedStr = result.attempts.length
       ? ` (skipped: ${result.attempts.map((a) => a.tier).join(", ")})`
       : "";
-    console.log(`[router] served via ${result.tierUsed}${policyStr}${skippedStr}`);
+    log.info(`[router] served via ${result.tierUsed}${policyStr}${skippedStr}`);
     return json(result.response, 200, { "x-router-tier": result.tierUsed });
   } catch (err: any) {
-    console.error("[router] all tiers failed:", err.message);
+    log.error("[router] all tiers failed:", err.message);
     return json({ error: "all_tiers_exhausted", detail: err.message }, 502);
   }
 }
@@ -68,7 +69,7 @@ async function handleStreamingMessages(
   try {
     const result = await routeRequestStream(normalized, { forcePrivate, forceTier });
     const policyStr = result.policyApplied ? ` [policy: ${result.policyApplied}]` : "";
-    console.log(`[router] streaming via ${result.tierUsed}${policyStr}`);
+    log.info(`[router] streaming via ${result.tierUsed}${policyStr}`);
     return new Response(result.stream, {
       status: 200,
       headers: {
@@ -79,7 +80,7 @@ async function handleStreamingMessages(
       },
     });
   } catch (err: any) {
-    console.error("[router] streaming setup failed:", err.message);
+    log.error("[router] streaming setup failed:", err.message);
     return json({ error: "all_tiers_exhausted", detail: err.message }, 502);
   }
 }
@@ -156,7 +157,7 @@ async function handleChatCompletions(request: Request, forceTier?: TierName): Pr
     try {
       const result = await routeRequestStream(normalized, { forcePrivate, forceTier: targetTier });
       const openAIStream = anthropicStreamToOpenAI(result.stream, requestedModel);
-      console.log(`[router/openai] streaming via ${result.tierUsed} [model: ${requestedModel}]`);
+      log.info(`[router/openai] streaming via ${result.tierUsed} [model: ${requestedModel}]`);
       return new Response(openAIStream, {
         status: 200,
         headers: {
@@ -167,18 +168,18 @@ async function handleChatCompletions(request: Request, forceTier?: TierName): Pr
         },
       });
     } catch (err: any) {
-      console.error("[router/openai] streaming setup failed:", err.message);
+      log.error("[router/openai] streaming setup failed:", err.message);
       return json({ error: { message: err.message, type: "all_tiers_exhausted", code: 502 } }, 502);
     }
   }
 
   try {
     const result = await routeRequest(normalized, { forcePrivate, forceTier: targetTier });
-    console.log(`[router/openai] served via ${result.tierUsed} [model: ${requestedModel}]`);
+    log.info(`[router/openai] served via ${result.tierUsed} [model: ${requestedModel}]`);
     const openAIResponse = anthropicResponseToOpenAI(result.response, requestedModel);
     return json(openAIResponse, 200, { "x-router-tier": result.tierUsed });
   } catch (err: any) {
-    console.error("[router/openai] request failed:", err.message);
+    log.error("[router/openai] request failed:", err.message);
     return json({ error: { message: err.message, type: "all_tiers_exhausted", code: 502 } }, 502);
   }
 }
@@ -366,8 +367,8 @@ export function startServer(port = config.port) {
     },
   });
 
-  console.log(`model-router listening on http://localhost:${server.port}`);
-  console.log(`  Anthropic: export ANTHROPIC_BASE_URL=http://localhost:${server.port}`);
-  console.log(`  OpenAI:    export OPENAI_BASE_URL=http://localhost:${server.port}/v1`);
+  log.info(`model-router listening on http://localhost:${server.port}`);
+  log.info(`  Anthropic: export ANTHROPIC_BASE_URL=http://localhost:${server.port}`);
+  log.info(`  OpenAI:    export OPENAI_BASE_URL=http://localhost:${server.port}/v1`);
   return server;
 }

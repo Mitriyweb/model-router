@@ -1,4 +1,5 @@
 import type { AnthropicResponse } from "../types";
+import { encodeSSE } from "./sse";
 
 type AnthropicResponseLike = AnthropicResponse;
 type Controller = ReadableStreamDefaultController<Uint8Array>;
@@ -26,7 +27,6 @@ export class AnthropicSSEWriter {
   }
 
   private controller: Controller;
-  private encoder = new TextEncoder();
   private blockIndex = -1;
   private openBlock = false;
   private outputTokens = 0;
@@ -36,9 +36,8 @@ export class AnthropicSSEWriter {
   }
 
   private emit(event: string, data: unknown) {
-    const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
     try {
-      this.controller.enqueue(this.encoder.encode(chunk));
+      this.controller.enqueue(encodeSSE(event, data));
     } catch {
       // Controller might be closed if client disconnected
     }

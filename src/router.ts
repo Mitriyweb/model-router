@@ -10,15 +10,19 @@ import { nvidiaAdapter } from "./adapters/nvidia";
 import { openrouterAdapter } from "./adapters/openrouter";
 import { cacheKey, setCached } from "./cache";
 import { config } from "./config";
+import { log } from "./log";
 import { POLICIES } from "./policies";
 import { pruneNormalizedRequest } from "./pruner";
 import { rateLimiter, retryAfterFromError } from "./rateLimiter";
 export { retryAfterFromError, retryAfterFromHeaders } from "./rateLimiter";
+import { AllTiersFailedError, type RouteAttempt } from "./errors";
 import { resolvers } from "./resolvers";
 import { AnthropicSSEWriter } from "./streaming/anthropicSSE";
 import { reconstructingStream } from "./streaming/reconstruct";
-import { countTokens } from "./tokenizer";
+import { estimateRequestTokens } from "./tokenizer";
 import type { NormalizedRequest, ProviderAdapter, ResolvedBy, TierName } from "./types";
+
+export { estimateRequestTokens as estimateTokens };
 
 const adapters: Record<TierName, ProviderAdapter> = {
   cerebras: cerebrasAdapter,
@@ -45,16 +49,6 @@ const limitsByTier: Record<TierName, { rpm: number; tpm: number; rpd: number }> 
   cohere: config.cohere.limits,
   local: config.local.limits,
 };
-
-/** Token estimate via cl100k_base tokenizer. */
-export function estimateTokens(req: NormalizedRequest): number {
-  let text = req.systemPrompt ?? "";
-  for (const m of req.messages) {
-    text += `\n${typeof m.content === "string" ? m.content : JSON.stringify(m.content)}`;
-  }
-  text += JSON.stringify(req.tools);
-  return countTokens(text);
-}
 
 /**
  * Decide the ordered list of tiers to try for this request.
@@ -99,7 +93,7 @@ export function planTierOrder(
 export interface RouteResult {
   tierUsed: ResolvedBy;
   response: Awaited<ReturnType<ProviderAdapter["send"]>>;
-  attempts: { tier: TierName; skipped?: string; error?: string }[];
+  attempts: RouteAttempt[];
   policyApplied?: string;
 }
 
@@ -128,7 +122,7 @@ export async function routeRequest(
     }
   }
 
-  const estimated = estimateTokens(req);
+  const estimated = estimateRequestTokens(req);
   let order = planTierOrder(req, estimated, opts);
 
   if (opts?.forceTier) {
@@ -140,7 +134,7 @@ export async function routeRequest(
     order = ["local", ...order.filter((t) => t !== "local")];
   }
 
-  const attempts: RouteResult["attempts"] = [];
+  const attempts: RouteAttempt[] = [];
 
   for (const tier of order) {
     const adapter = adapters[tier];
@@ -148,7 +142,7 @@ export async function routeRequest(
 
     const hasKey = hasCredentials(tier);
     if (!hasKey) {
-      console.warn(`[router] skip ${tier}: no API key/token configured`);
+      log.warn(`[router] skip ${tier}: no API key/token configured`);
       attempts.push({ tier, skipped: "no API key/token configured" });
       continue;
     }
@@ -162,12 +156,12 @@ export async function routeRequest(
 
     if (estimated > targetLimit) {
       effectiveReq = pruneNormalizedRequest(req, targetLimit);
-      effectiveTokens = estimateTokens(effectiveReq);
+      effectiveTokens = estimateRequestTokens(effectiveReq);
     }
 
     const effectiveBudgetTokens = effectiveTokens + requestedOutputTokens;
     if (limits.tpm > 0 && effectiveBudgetTokens > limits.tpm) {
-      console.warn(
+      log.warn(
         `[router] skip ${tier}: effective request budget (${effectiveBudgetTokens} tokens) exceeds TPM limit (${limits.tpm})`,
       );
       attempts.push({
@@ -178,20 +172,20 @@ export async function routeRequest(
     }
 
     if (!adapter.canHandle(effectiveReq, effectiveTokens)) {
-      console.warn(`[router] skip ${tier}: request doesn't fit this tier (context/size)`);
+      log.warn(`[router] skip ${tier}: request doesn't fit this tier (context/size)`);
       attempts.push({ tier, skipped: "request doesn't fit this tier (context/size)" });
       continue;
     }
     if (!rateLimiter.canServe(tier, limits, effectiveBudgetTokens)) {
-      console.warn(`[router] skip ${tier}: rate limit reached`);
+      log.warn(`[router] skip ${tier}: rate limit reached`);
       attempts.push({ tier, skipped: "rate limit reached" });
       continue;
     }
 
     try {
-      console.log(`[router] trying ${tier}...`);
+      log.info(`[router] trying ${tier}...`);
       if (effectiveTokens < estimated) {
-        console.log(
+        log.info(
           `[router] pruned request for ${tier} from ${estimated} to ${effectiveTokens} tokens`,
         );
       }
@@ -200,10 +194,10 @@ export async function routeRequest(
       rateLimiter.record(tier, totalTokens);
       const key = await cacheKey(req);
       setCached(key, response);
-      console.log(`[router] success via ${tier}`);
+      log.info(`[router] success via ${tier}`);
       return { tierUsed: tier, response, attempts, policyApplied: rule?.name };
     } catch (err: any) {
-      console.warn(`[router] fail ${tier}: ${err.message ?? String(err)}`);
+      log.warn(`[router] fail ${tier}: ${err.message ?? String(err)}`);
       const retryAfterMs = retryAfterFromError(err);
       if (retryAfterMs !== undefined) {
         rateLimiter.markUnavailable(tier, retryAfterMs);
@@ -212,7 +206,7 @@ export async function routeRequest(
     }
   }
 
-  throw new Error(`All tiers exhausted or unavailable: ${JSON.stringify(attempts, null, 2)}`);
+  throw new AllTiersFailedError(attempts);
 }
 
 export function hasCredentials(tier: TierName): boolean {
@@ -270,7 +264,7 @@ export async function routeRequestStream(
     }
   }
 
-  const estimated = estimateTokens(req);
+  const estimated = estimateRequestTokens(req);
   let order = planTierOrder(req, estimated, opts);
   if (opts?.forceTier) {
     order = [opts.forceTier];
@@ -296,12 +290,12 @@ export async function routeRequestStream(
 
     if (estimated > targetLimit) {
       effectiveReq = pruneNormalizedRequest(req, targetLimit);
-      effectiveTokens = estimateTokens(effectiveReq);
+      effectiveTokens = estimateRequestTokens(effectiveReq);
     }
 
     const effectiveBudgetTokens = effectiveTokens + requestedOutputTokens;
     if (limits.tpm > 0 && effectiveBudgetTokens > limits.tpm) {
-      console.warn(
+      log.warn(
         `[router] skip streaming ${tier}: effective request budget (${effectiveBudgetTokens} tokens) exceeds TPM limit (${limits.tpm})`,
       );
       continue;
@@ -313,7 +307,7 @@ export async function routeRequestStream(
     rateLimiter.record(tier, effectiveBudgetTokens);
 
     if (effectiveTokens < estimated) {
-      console.log(
+      log.info(
         `[router] pruned stream request for ${tier} from ${estimated} to ${effectiveTokens} tokens`,
       );
     }

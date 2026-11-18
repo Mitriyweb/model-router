@@ -1,3 +1,4 @@
+import { log } from "./log";
 import type { TierLimits, TierName } from "./types";
 
 interface Usage {
@@ -39,7 +40,7 @@ export class RateLimiter {
       }
       await this.saveImmediately();
     } catch (err) {
-      console.warn(`[rateLimiter] couldn't load ${STATE_FILE}, starting fresh:`, err);
+      log.warn(`[rateLimiter] couldn't load ${STATE_FILE}, starting fresh:`, err);
     }
   }
 
@@ -52,7 +53,7 @@ export class RateLimiter {
     try {
       await Bun.write(STATE_FILE, JSON.stringify(obj, null, 2));
     } catch (err) {
-      console.warn(`[rateLimiter] couldn't save ${STATE_FILE}:`, err);
+      log.warn(`[rateLimiter] couldn't save ${STATE_FILE}:`, err);
     }
   }
 
@@ -91,7 +92,7 @@ export class RateLimiter {
     const now = Date.now();
     const unavailableUntil = this.unavailableUntil.get(tier) ?? 0;
     if (unavailableUntil > now) {
-      console.warn(
+      log.warn(
         `[rateLimiter] ${tier} unavailable until ${new Date(unavailableUntil).toISOString()}`,
       );
       return false;
@@ -111,7 +112,7 @@ export class RateLimiter {
       tokensInWindow + estimatedTokens <= limits.tpm;
 
     if (!canServe) {
-      console.warn(`[rateLimiter] ${tier} skip: rate limit reached`, JSON.stringify(snapshot));
+      log.warn(`[rateLimiter] ${tier} skip: rate limit reached`, JSON.stringify(snapshot));
     }
 
     this.cleanupIfEmpty(tier, usage);

@@ -1,5 +1,7 @@
-import { countTokens } from "./tokenizer";
+import { countTokens, estimateRequestTokens } from "./tokenizer";
 import type { AnthropicMessage, NormalizedRequest } from "./types";
+
+export { estimateRequestTokens };
 
 export function estimateMessageTokens(message: AnthropicMessage): number {
   if (typeof message.content === "string") {
@@ -15,19 +17,6 @@ export function estimateMessageTokens(message: AnthropicMessage): number {
       text += `result:${block.tool_use_id}:${typeof block.content === "string" ? block.content : JSON.stringify(block.content)}`;
     }
   }
-  return countTokens(text);
-}
-
-export function estimateRequestTokens(req: NormalizedRequest): number {
-  let text = req.systemPrompt ?? "";
-  for (const m of req.messages) {
-    if (typeof m.content === "string") {
-      text += `\n${m.content}`;
-    } else {
-      text += `\n${JSON.stringify(m.content)}`;
-    }
-  }
-  text += JSON.stringify(req.tools);
   return countTokens(text);
 }
 

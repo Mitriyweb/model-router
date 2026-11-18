@@ -10,6 +10,8 @@
  *   data: [DONE]
  */
 
+import { parseSSEFrames } from "./sse";
+
 export function anthropicStreamToOpenAI(
   source: ReadableStream<Uint8Array>,
   fallbackModel = "model-router-auto",
@@ -123,20 +125,13 @@ export function anthropicStreamToOpenAI(
   const transform = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
       buffer += decoder.decode(chunk, { stream: true });
-      const events = buffer.split("\n\n");
-      buffer = events.pop() ?? "";
+      const { events, rest } = parseSSEFrames(buffer);
+      buffer = rest;
 
-      for (const raw of events) {
-        let eventName = "";
-        let dataLine = "";
-        for (const line of raw.split("\n")) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith("event:")) eventName = trimmed.slice(6).trim();
-          else if (trimmed.startsWith("data:")) dataLine = trimmed.slice(5).trim();
-        }
-        if (!eventName || !dataLine) continue;
+      for (const { event, data } of events) {
+        if (!event) continue;
         try {
-          handleEvent(eventName, JSON.parse(dataLine), controller);
+          handleEvent(event, JSON.parse(data), controller);
         } catch {
           // malformed frame — continue
         }

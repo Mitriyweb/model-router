@@ -1,6 +1,7 @@
 import { config } from "../config";
 import { rateLimiter, retryAfterFromError } from "../rateLimiter";
 import { AnthropicSSEWriter } from "../streaming/anthropicSSE";
+import { iterateSSE } from "../streaming/sse";
 import type { AnthropicResponse, ContentBlock, NormalizedRequest, ProviderAdapter } from "../types";
 import { ProviderError, anthropicToolsToOpenAI, safeJsonParse } from "./openaiCompatible";
 
@@ -165,66 +166,51 @@ export const cohereAdapter: ProviderAdapter = {
             return;
           }
 
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
           let textBlockOpen = false;
           let sawTool = false;
           let inputTokens = 0;
           let outputTokens = 0;
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
+          for await (const { data } of iterateSSE(res.body)) {
+            if (!data || data === "[DONE]") continue;
 
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
+            let event: any;
+            try {
+              event = JSON.parse(data);
+            } catch {
+              continue;
+            }
 
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith("data:")) continue;
-              const dataStr = trimmed.slice(5).trim();
-              if (!dataStr || dataStr === "[DONE]") continue;
-
-              let event: any;
-              try {
-                event = JSON.parse(dataStr);
-              } catch {
-                continue;
+            const type = event.type;
+            if (type === "content-delta") {
+              const text = event.delta?.message?.content?.text;
+              if (text) {
+                if (!textBlockOpen) {
+                  writer.startText();
+                  textBlockOpen = true;
+                }
+                writer.textDelta(text);
               }
-
-              const type = event.type;
-              if (type === "content-delta") {
-                const text = event.delta?.message?.content?.text;
-                if (text) {
-                  if (!textBlockOpen) {
-                    writer.startText();
-                    textBlockOpen = true;
-                  }
-                  writer.textDelta(text);
-                }
-              } else if (type === "tool-call-start") {
-                if (textBlockOpen) {
-                  writer.stopBlock();
-                  textBlockOpen = false;
-                }
-                const tc = event.delta?.message?.tool_calls;
-                const id = tc?.id ?? crypto.randomUUID();
-                const name = tc?.function?.name ?? "";
-                writer.startTool(id, name);
-                sawTool = true;
-              } else if (type === "tool-call-delta") {
-                const args = event.delta?.message?.tool_calls?.function?.arguments;
-                if (args) writer.toolInputDelta(args);
-              } else if (type === "tool-call-end") {
+            } else if (type === "tool-call-start") {
+              if (textBlockOpen) {
                 writer.stopBlock();
-              } else if (type === "message-end") {
-                const usage = event.delta?.usage?.tokens;
-                if (usage) {
-                  inputTokens = usage.input_tokens ?? inputTokens;
-                  outputTokens = usage.output_tokens ?? outputTokens;
-                }
+                textBlockOpen = false;
+              }
+              const tc = event.delta?.message?.tool_calls;
+              const id = tc?.id ?? crypto.randomUUID();
+              const name = tc?.function?.name ?? "";
+              writer.startTool(id, name);
+              sawTool = true;
+            } else if (type === "tool-call-delta") {
+              const args = event.delta?.message?.tool_calls?.function?.arguments;
+              if (args) writer.toolInputDelta(args);
+            } else if (type === "tool-call-end") {
+              writer.stopBlock();
+            } else if (type === "message-end") {
+              const usage = event.delta?.usage?.tokens;
+              if (usage) {
+                inputTokens = usage.input_tokens ?? inputTokens;
+                outputTokens = usage.output_tokens ?? outputTokens;
               }
             }
           }

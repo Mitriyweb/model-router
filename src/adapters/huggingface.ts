@@ -1,4 +1,5 @@
 import { config } from "../config";
+import { log } from "../log";
 import type { NormalizedRequest, ProviderAdapter } from "../types";
 import {
   ProviderError,
@@ -25,7 +26,7 @@ export const huggingfaceAdapter: ProviderAdapter = {
 
   canHandle(_req: NormalizedRequest, estimatedTokens: number) {
     if (!config.huggingface.model) {
-      console.warn("[HF] skip: no model configured (HF_MODEL is empty)");
+      log.warn("[HF] skip: no model configured (HF_MODEL is empty)");
       return false;
     }
     return fitsOpenAICompatibleContext(estimatedTokens, config.routerMaxContextTokens);
@@ -33,10 +34,10 @@ export const huggingfaceAdapter: ProviderAdapter = {
 
   async send(req: NormalizedRequest) {
     const model = req.model ?? config.huggingface.model;
-    console.log("[HF] request started");
-    console.log(`[HF] model=${model}`);
+    log.debug("[HF] request started");
+    log.debug(`[HF] model=${model}`);
     if (config.huggingface.provider) {
-      console.log(`[HF] provider=${config.huggingface.provider}`);
+      log.debug(`[HF] provider=${config.huggingface.provider}`);
     }
 
     const payload = buildOpenAIPayload(req, model);
@@ -54,31 +55,31 @@ export const huggingfaceAdapter: ProviderAdapter = {
       });
     } catch (err: any) {
       const msg = err?.message ?? String(err);
-      console.error(`[HF] error: ${msg}`);
+      log.error(`[HF] error: ${msg}`);
       throw err;
     }
 
     if (!res.ok) {
       if (res.status === 429) {
-        console.warn("[HF] error: rate limit");
+        log.warn("[HF] error: rate limit");
       } else {
-        console.warn(`[HF] error: HTTP ${res.status}`);
+        log.warn(`[HF] error: HTTP ${res.status}`);
       }
       const message = await readProviderError(res, "Hugging Face", model);
       throw new ProviderError(message, res.status, res.headers);
     }
 
     const data = await res.json();
-    console.log("[HF] success");
+    log.debug("[HF] success");
     return openAIResponseToAnthropic(data, model);
   },
 
   sendStream(req: NormalizedRequest) {
     const model = req.model ?? config.huggingface.model;
-    console.log("[HF] request started (stream)");
-    console.log(`[HF] model=${model}`);
+    log.debug("[HF] request started (stream)");
+    log.debug(`[HF] model=${model}`);
     if (config.huggingface.provider) {
-      console.log(`[HF] provider=${config.huggingface.provider}`);
+      log.debug(`[HF] provider=${config.huggingface.provider}`);
     }
 
     const payload = buildOpenAIPayload(req, model);
