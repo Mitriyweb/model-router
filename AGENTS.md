@@ -7,66 +7,82 @@ Universal AI proxy that routes Claude Code, Codex, Agent Team, ZeroClaw, Aider, 
 - **Dual API**: Anthropic (`/v1/messages`) + OpenAI (`/v1/chat/completions`, `/v1/models`) on the same port
 - **10 providers**: Cerebras, Groq, Gemini, OpenRouter, Mistral, NVIDIA NIM, Hugging Face, Cloudflare AI, Cohere, Local (Ollama)
 - **Automatic fallback**: Tries providers in order, skips rate-limited or unconfigured ones
-- **SHA-256 cache**: Exact-repeat requests served instantly without hitting upstream
+- **SHA-256 cache**: TTL/LRU eviction, model-aware key, statistics in `/status`
 - **SSE streaming**: Anthropic and OpenAI event formats, bidirectional converters
-- **Rate limiter**: Per-provider RPM / TPM / RPD tracking
-- **Gzip bodies**: Accepts `Content-Encoding: gzip` request bodies on both APIs
+- **Rate limiter**: Per-provider RPM / TPM / RPD tracking with persisted state
+- **Compressed bodies**: Accepts `gzip`, `deflate`, and `br` with a decompressed size cap
+- **HTTP middleware**: Route table, request IDs, optional CORS, consistent error envelopes and `405`/`401`/`413`/`502`
+- **Strict TypeScript**: `noUncheckedIndexedAccess`, `noImplicitOverride`, `verbatimModuleSyntax`
 
 ## Project Structure
 
 ```text
 model-router/
 ├── src/
-│   ├── adapters/              # Provider-specific adapters (one file per provider)
-│   │   ├── openaiCompatible.ts  # Shared OpenAI-format logic + request/response converters
+│   ├── adapters/              # Protocol translation + compatibility shims
+│   │   ├── openaiCompatible.ts  # Shared OpenAI request/response converters
 │   │   ├── gemini.ts            # Google Gemini (native API)
 │   │   ├── cohere.ts            # Cohere Chat v2
-│   │   ├── mistral.ts, cerebras.ts, groq.ts, nvidia.ts, cloudflare.ts, openrouter.ts, huggingface.ts, local.ts
+│   │   └── cerebras.ts, groq.ts, mistral.ts, nvidia.ts, cloudflare.ts,
+│   │       openrouter.ts, huggingface.ts, local.ts  # thin re-export shims
+│   ├── providers/             # Declarative provider registry and factories
+│   │   ├── definitions.ts     # Single source of truth for providers and limits
+│   │   ├── index.ts           # Built config, credential checks, adapter lookup
+│   │   ├── openai.ts          # createOpenAIAdapter(definition)
+│   │   └── schema.ts          # Shared JSON-schema sanitizer
+│   ├── routing/               # Unified send/stream pipeline
+│   │   ├── planner.ts         # policy + order + force options -> AttemptPlan[]
+│   │   ├── attempt.ts         # prune, budget, canHandle, rate-limit checks
+│   │   └── router.ts          # one loop parameterized by send/stream sink
+│   ├── server/                # HTTP layer
+│   │   ├── index.ts           # Bun.serve, lifecycle, shutdown hooks
+│   │   ├── routes.ts          # route table
+│   │   ├── http.ts            # body limits, compression, errors, auth, CORS
+│   │   ├── handlers.ts        # messages/chat/models/providers/status handlers
+│   │   └── parsers.ts         # unknown JSON -> typed request bodies
 │   ├── streaming/
+│   │   ├── sse.ts             # Shared SSE frame parser/encoder
 │   │   ├── anthropicSSE.ts    # Writes Anthropic SSE events
 │   │   ├── openaiSSE.ts       # Converts Anthropic SSE → OpenAI SSE chunks
 │   │   └── reconstruct.ts     # Reconstructs full AnthropicResponse from stream
-│   ├── resolvers/index.ts     # Maps TierName → adapter function
-│   ├── config.ts              # Per-provider config, limits, env vars
-│   ├── types.ts               # Shared types: NormalizedRequest, AnthropicResponse, TierName
-│   ├── router.ts              # Core routing: tier ordering, fallback, cache, policy
-│   ├── policies.ts            # Custom routing rules (exact-repeat cache, etc.)
+│   ├── config/                # Typed configuration + validation
+│   ├── cache.ts               # ResponseCache (TTL + LRU)
 │   ├── rateLimiter.ts         # RPM / TPM / RPD tracking per tier
+│   ├── policies.ts            # Deterministic routing policies (exact-repeat cache, etc.)
 │   ├── tokenizer.ts           # Token estimation
-│   ├── cache.ts               # SHA-256 request cache
-│   ├── server.ts              # HTTP server (Anthropic + OpenAI endpoints)
-│   └── index.ts               # Entrypoint
+│   ├── pruner.ts              # Context pruning
+│   ├── resolvers/index.ts     # TierName -> adapter function
+│   ├── router.ts, server.ts   # re-export shims for existing imports
+│   ├── errors.ts, log.ts, env.ts, types.ts
+│   └── index.ts               # CLI + lifecycle
 ├── tests/
-│   ├── adapters/             # Per-adapter unit tests
-│   ├── e2e/                  # Live provider tests (bun run test:e2e, gated on env keys)
-│   ├── streaming.test.ts     # AnthropicSSEWriter + reconstructingStream
-│   ├── openai.test.ts        # OpenAI request/response converters + SSE transformer
-│   ├── cache.test.ts         # SHA-256 hash + store/retrieve
-│   ├── router.test.ts        # Token estimation + tier planning
-│   ├── rateLimiter.test.ts   # RPM / TPM / RPD enforcement
-│   ├── server.test.ts        # Endpoint routing, provider overrides, /v1/models
-│   ├── pruner.test.ts        # Context pruning behavior
-│   └── env.test.ts           # .env loading
+│   ├── adapters/              # Parameterized OpenAI-compatible contract suite + Gemini/Cohere/HF suites
+│   ├── routing/               # Planner/pipeline + integration coverage
+│   ├── server/                # Endpoint and body-parser tests
+│   ├── streaming/             # SSE parser tests
+│   ├── e2e/                   # Live provider tests (bun run test:e2e, gated on env keys)
+│   └── cache, config, env, openai, pruner, providers, rateLimiter, router, security, server, streaming tests
 ├── docs/
 │   └── index.html             # GitHub Pages landing page
 ├── .github/
-│   ├── workflows/ci.yml       # CI: typecheck + lint + tests on push/PR
-│   ├── workflows/release.yml  # Release: matrix builds (darwin-arm64/x64, linux-arm64/x64) + GitHub Release
+│   ├── workflows/ci.yml       # CI: typecheck + lint + tests + env drift check
+│   ├── workflows/release.yml  # Release: matrix builds + GitHub Release on v* tag
 │   └── workflows/deploy.yml   # Deploy docs/ to GitHub Pages
 ├── .agents/
 │   └── skills/review-and-commit/SKILL.md  # /review-and-commit skill
-├── .env.example               # All env vars documented
+├── scripts/                   # env example generation, version bump, release helper
+├── .env.example               # Generated by scripts/generate-env-example.ts
 ├── install.sh                 # One-line installer script
-├── biome.json                 # Linting and formatting config
-├── tsconfig.json
-└── package.json
+├── biome.json, tsconfig.json, package.json
+└── LICENSE
 ```
 
 ## Development Workflow
 
 1. Make code changes
-2. Run `bun run validate` — typecheck + lint + tests must all pass
+2. Run `bun run verify` — typecheck + lint + tests + env drift check + binary build must all pass
 3. Use `/review-and-commit` to review and commit following conventional commits
+4. For a release: bump `package.json`, commit, tag `v<version>`, push the tag; Release CI publishes binaries and the GitHub Release
 
 ## Key Commands
 
@@ -74,26 +90,36 @@ model-router/
 # Start dev server with hot reload
 bun run dev
 
-# Full validation (typecheck + biome + tests)
+# Full validation (typecheck + biome + tests + env check)
 bun run validate
+
+# Validate and also build a standalone binary
+bun run verify
 
 # Typecheck only
 bun run typecheck
 
-# Lint only (check)
+# Lint only (check) / lint with auto-fix
 bun run lint
-
-# Lint with auto-fix
 bun run lint:fix
 
 # Run tests
 bun test
 
-# Build standalone binary
-bun run build
+# Run live E2E adapter tests (gated on provider keys)
+bun run test:e2e
 
-# Build for all platforms (darwin-arm64/x64, linux-arm64/x64)
+# Regenerate / check .env.example
+bun run env:generate
+bun run env:check
+
+# Build standalone binary / all platform binaries
+bun run build
 bun run build:all
+
+# Version and release helpers
+bun run bump:version -- patch   # or minor|major
+bun run release -- patch        # bump, verify, commit, tag, push, GitHub Release
 ```
 
 ## Connect Clients
@@ -103,7 +129,7 @@ bun run build:all
 # Claude Code:
 ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude
 # Codex:
-ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy Codex
+ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy codex
 # Or for Agent Team:
 export ANTHROPIC_BASE_URL=http://localhost:8787
 export ANTHROPIC_API_KEY=dummy
@@ -130,7 +156,7 @@ export OPENAI_API_KEY="dummy"
 | `POST /v1/providers/{provider}/messages` | Anthropic | Force a tier via the path |
 | `POST /v1/providers/{provider}/chat/completions` | OpenAI | Force a tier via the path |
 
-Tier overrides also work via `x-router-provider`, `x-router-tier`, `x-router-private: true` (local only) and provider-prefixed model names.
+Tier overrides also work via `x-router-provider`, `x-router-tier`, `x-router-private: true` (local only) and provider-prefixed model names. Both request APIs accept `Content-Encoding: gzip`, `deflate`, or `br` bodies; decompressed payloads are capped by `ROUTER_MAX_BODY_BYTES`. Reset endpoints also accept `x-router-auth-token`. Every response carries `x-request-id` and `x-router-tier`.
 
 ## Environment Variables
 
@@ -148,6 +174,8 @@ ROUTER_CACHE_MAX_ENTRIES=500
 ROUTER_MAX_BODY_BYTES=1048576
 ROUTER_CORS_ORIGIN=
 ROUTER_AUTH_TOKEN=
+ROUTER_MAX_CONTEXT_TOKENS=128000
+RATE_LIMIT_STATE_FILE=.router-state.json
 ```
 
 ## Project Links
@@ -158,4 +186,5 @@ ROUTER_AUTH_TOKEN=
 
 ## Workflows
 
-- `/review-and-commit` — review code and create a conventional commit
+- `/review-and-commit` — review changes, run `bun run verify`, create a conventional commit, then tag/release when the version changes
+- Release CI — a `v<version>` tag triggers matrix builds and a GitHub Release with binaries and `checksums.txt`

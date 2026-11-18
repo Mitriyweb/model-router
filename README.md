@@ -1,6 +1,6 @@
 # model-router
 
-Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, **mini-agent**, and custom Chat UIs to run on **10 free-tier and local LLM providers** instead of expensive paid APIs.
+Universal AI proxy with Anthropic and OpenAI APIs that lets **Claude Code**, **Codex**, **Agent Team**, **ZeroClaw**, **Aider**, **Cline (Roo Code)**, **Cursor**, **mini-agent**, and custom Chat UIs run on **10 free-tier and local LLM providers** with automatic fallback, caching, and rate limiting.
 
 ## Supported Providers
 
@@ -23,7 +23,7 @@ Universal AI proxy that allows **Claude Code**, **Agent Team**, **ZeroClaw**, **
 
 `model-router` simultaneously exposes two standard APIs on port `8787`:
 
-1. **Anthropic API** (`POST /v1/messages`): For Claude Code, Agent Team, and Anthropic clients.
+1. **Anthropic API** (`POST /v1/messages`): For Claude Code, Codex, Agent Team, and Anthropic clients.
 2. **OpenAI API** (`POST /v1/chat/completions` & `GET /v1/models`): For ZeroClaw, Aider, Cline, Roo Code, Cursor, Continue.dev, mini-agent, and Web Chat interfaces.
 
 Both endpoints accept compressed request bodies — send `Content-Encoding: gzip`, `deflate`, or `br` with a compressed JSON payload to reduce upload size on large prompts. Decompressed bodies are capped by `ROUTER_MAX_BODY_BYTES` (default: 1 MiB).
@@ -84,6 +84,12 @@ bun run start
 
 ```bash
 ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy claude
+```
+
+Codex uses the same Anthropic endpoint:
+
+```bash
+ANTHROPIC_BASE_URL=http://localhost:8787 ANTHROPIC_API_KEY=dummy codex
 ```
 
 > **Alias Tip:** Add to your `~/.zshrc`:
@@ -267,11 +273,22 @@ bun run validate
 # Validate and also build a standalone binary
 bun run verify
 
-# Regenerate .env.example after changing src/providers/definitions.ts
+# Typecheck / lint only
+bun run typecheck
+bun run lint
+bun run lint:fix
+
+# Regenerate / check .env.example after changing src/providers/definitions.ts
 bun run env:generate
+bun run env:check
 
 # Run live E2E adapter tests against configured provider APIs (.env)
 bun run test:e2e
+
+# Compile standalone executable / all platform binaries
+bun run build
+bun run build:all
+```
 
 ### E2E Adapter Testing
 
@@ -282,18 +299,25 @@ bun run test:e2e
 - **Token Efficiency**: Each test sends a minimal payload (`maxTokens: 5`, single-word prompt) to verify availability while consuming minimal tokens.
 - **Environment Gating**: An adapter test only executes if its required key (e.g., `GROQ_API_KEY`, `GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN`) is set and valid in `.env` (or environment variables). Set `LOCAL_E2E=true` to test local Ollama servers.
 
-# Compile standalone executable
-bun run build
-
-# Compile all platform binaries
-bun run build:all
-```
-
 ---
 
 ## Build Process
 
-The standalone executable bundles the version information directly from `package.json` during compilation, making it available at runtime without extra build scripts.
+The standalone executable bundles the version information directly from `package.json` during compilation, making it available at runtime without extra build scripts. `bun run build:all` produces binaries for `darwin-arm64`, `darwin-x64`, `linux-arm64`, and `linux-x64`.
+
+## Release Process
+
+Releases are driven by the version in `package.json`. To publish a patch release:
+
+```bash
+bun run bump:version -- patch   # or minor|major
+git add package.json
+git commit -m "chore: bump version to <version>"
+git tag -a "v<version>" -m "release v<version>"
+git push origin HEAD "v<version>"
+```
+
+Pushing a `v*` tag triggers `.github/workflows/release.yml`, which runs validation, builds all four platform binaries, generates `checksums.txt`, and publishes the GitHub Release. Alternatively, `bun run release -- patch` performs the bump, verification, commit, tag, push, and `gh release create` locally; it requires an authenticated GitHub CLI and a clean working tree.
 
 ## License
 

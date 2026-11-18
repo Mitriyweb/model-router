@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>model-router — Universal Free LLM Proxy</title>
-  <meta name="description" content="Universal AI proxy. Run Claude Code, Agent Team, ZeroClaw, Aider, Cline, and mini-agent on 10 free-tier LLM providers — Mistral, Groq, Gemini, Cerebras, OpenRouter, Hugging Face, and more." />
+  <meta name="description" content="Universal AI proxy with Anthropic and OpenAI APIs. Run Claude Code, Codex, Agent Team, ZeroClaw, Aider, Cline, and mini-agent on 10 free-tier and local LLM providers, with automatic fallback, caching, and rate limiting." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -215,6 +215,7 @@
   <div class="nav-logo">model<span>-</span>router</div>
   <div class="nav-links">
     <a href="#providers">Providers</a>
+    <a href="#api">API</a>
     <a href="#claude-code">Claude Code</a>
     <a href="#clients">Other Clients</a>
     <a href="#install">Install</a>
@@ -226,7 +227,7 @@
 <div class="hero">
   <div class="badge">Open Source · Free Tier · 10 Providers</div>
   <h1>Universal <span class="grad">Free LLM</span> Proxy</h1>
-  <p>Run Claude Code, Agent Team, ZeroClaw, Aider, Cline, and mini-agent on <strong>10 free-tier providers</strong> instead of paying for the Claude API.</p>
+  <p>Run Claude Code, Codex, Agent Team, ZeroClaw, Aider, Cline, and mini-agent on <strong>10 free-tier and local providers</strong> instead of paying for the Claude API.</p>
   <div class="hero-actions">
     <a class="btn-primary" href="https://github.com/Mitriyweb/model-router" target="_blank" rel="noopener">View on GitHub</a>
     <a class="btn-secondary" href="#claude-code">Claude Code Setup</a>
@@ -294,7 +295,7 @@
     </div>
     <div class="provider-card">
       <div class="provider-header"><span class="provider-name">Mistral AI</span><span class="provider-tag free">Free</span></div>
-      <div class="provider-limit">2 RPM / ~1B tokens/month</div>
+      <div class="provider-limit">2 RPM / 500k TPM / ~1B tokens/month</div>
       <div class="provider-desc">Codestral for code generation, Mistral Large for reasoning</div>
     </div>
     <div class="provider-card">
@@ -333,17 +334,18 @@
 <!-- HOW IT WORKS -->
 <section>
   <h2>How It Works</h2>
-  <p class="section-sub">One proxy, two API formats, ten providers — automatic fallback and rate limiting built-in.</p>
+  <p class="section-sub">One proxy, two API formats, ten providers — route table, fallback, cache and rate limits built in.</p>
   <div class="arch">
 <pre>
-  <span class="hi">Claude Code / Agent Team</span>       <span class="hi">ZeroClaw / Aider / mini-agent</span>
+  <span class="hi">Claude Code / Codex / Agent Team</span>   <span class="hi">ZeroClaw / Aider / mini-agent</span>
   (Anthropic API)                 (OpenAI API)
         │                               │
         │ POST /v1/messages             │ POST /v1/chat/completions
         ▼                               ▼
   ┌─────────────────────────────────────────────────┐
   │              <span class="hi2">model-router</span>                      │
-  │   [Rate Limiter] [SHA-256 Cache] [Fallback]     │
+  │  [Route Table] [Rate Limiter] [LRU Cache]       │
+  │  [Fallback]    [SSE Bridge]   [Body Parsers]    │
   └──────────────────────┬──────────────────────────┘
                          │
         ┌────────────────┼────────────────┐
@@ -352,6 +354,61 @@
   <span class="hi3">Gemini</span>           <span class="hi3">OpenRouter</span>      <span class="hi3">Ollama</span>
   <span class="hi3">Hugging Face</span>     ...and 3 more
 </pre>
+  </div>
+</section>
+
+<!-- API & CONFIG -->
+<section id="api">
+  <h2>One Port, Two APIs</h2>
+  <p class="section-sub">Anthropic and OpenAI clients share the same provider registry, fallback chain, cache, and limits.</p>
+  <div class="clients-grid">
+    <div class="client-card">
+      <div class="client-title">Anthropic API</div>
+      <div class="code-block">
+        <span class="cmd2">POST</span> /v1/messages<br>
+        <span class="cmd2">POST</span> /v1/providers/{provider}/messages<br>
+        <span style="color:#6c63ff"># Claude Code, Codex, Agent Team</span>
+      </div>
+    </div>
+    <div class="client-card">
+      <div class="client-title">OpenAI API</div>
+      <div class="code-block">
+        <span class="cmd2">POST</span> /v1/chat/completions<br>
+        <span class="cmd2">POST</span> /v1/providers/{provider}/chat/completions<br>
+        <span class="cmd2">GET</span> /v1/models<br>
+        <span style="color:#6c63ff"># ZeroClaw, Aider, Cline, mini-agent</span>
+      </div>
+    </div>
+    <div class="client-card">
+      <div class="client-title">Monitoring &amp; control</div>
+      <div class="code-block">
+        <span class="cmd2">GET</span> /v1/providers<br>
+        <span class="cmd2">GET</span> /status<br>
+        <span class="cmd2">GET</span> /health<br>
+        <span class="cmd2">POST</span> /reset, /reset-state, /v1/reset
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.8rem">Reset endpoints require <code style="color:#e06c75">ROUTER_AUTH_TOKEN</code>. Every response includes <code style="color:#e06c75">x-request-id</code> and <code style="color:#e06c75">x-router-tier</code>.</p>
+    </div>
+    <div class="client-card">
+      <div class="client-title">Tier overrides</div>
+      <div class="code-block">
+        <span class="val">x-router-provider</span>: groq<br>
+        <span class="val">x-router-tier</span>: gemini<br>
+        <span class="val">x-router-private</span>: true<br>
+        model: <span class="val">groq/llama-3.3-70b-versatile</span>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.8rem">Pin one provider, restrict to local Ollama, or prefix the model name.</p>
+    </div>
+  </div>
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin-top:1rem">
+    <div style="font-weight:600;margin-bottom:0.6rem">Runtime configuration</div>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem">Both request APIs accept <code style="color:#e06c75">gzip</code>, <code style="color:#e06c75">deflate</code>, and <code style="color:#e06c75">br</code> bodies, capped after decompression by <code style="color:#e06c75">ROUTER_MAX_BODY_BYTES</code>. Copy <code style="color:#e06c75">.env.example</code> to <code style="color:#e06c75">.env</code> to configure providers and router behavior.</p>
+    <div class="code-block" style="margin-bottom:0">
+      <span class="val">FALLBACK_ORDER</span>=cerebras,groq,gemini,openrouter,mistral,nvidia,huggingface,cloudflare,cohere,local<br>
+      <span class="val">ROUTER_HOST</span>=127.0.0.1<br>
+      <span class="val">ROUTER_DISABLE_CACHE</span>=false<br>
+      <span class="val">ROUTER_CACHE_TTL_MS</span>=600000
+    </div>
   </div>
 </section>
 
@@ -414,7 +471,7 @@
       <div class="code-block" style="margin-bottom:0.8rem">
         <span class="cmd2">curl</span> http://localhost:8787/status
       </div>
-      <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6">Shows request counts and token usage per provider in real time.</p>
+      <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6">Shows request counts, token usage, and cache statistics per provider in real time. Each response also includes an <code style="color:#e06c75">x-router-tier</code> header with the provider that handled it.</p>
       <p style="font-size:0.83rem;color:var(--text-muted);margin-top:0.6rem">Or ask inside Claude Code: <em>"What model are you?"</em> — Mistral will answer with its identity.</p>
     </div>
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem">
@@ -448,6 +505,14 @@
         <span class="kw">export</span> <span class="val">ANTHROPIC_BASE_URL</span>=http://localhost:8787<br>
         <span class="kw">export</span> <span class="val">ANTHROPIC_API_KEY</span>=dummy<br>
         <span class="cmd2">claude</span>
+      </div>
+    </div>
+    <div class="client-card">
+      <div class="client-title"><span class="client-icon">🧠</span> Codex</div>
+      <div class="code-block">
+        <span class="kw">export</span> <span class="val">ANTHROPIC_BASE_URL</span>=http://localhost:8787<br>
+        <span class="kw">export</span> <span class="val">ANTHROPIC_API_KEY</span>=dummy<br>
+        <span class="cmd2">codex</span>
       </div>
     </div>
     <div class="client-card">
