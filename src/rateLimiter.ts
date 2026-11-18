@@ -1,5 +1,8 @@
+import { mkdir, rename, rm } from "node:fs/promises";
+import path from "node:path";
 import { config } from "./config";
 import { log } from "./log";
+import { VALID_TIERS } from "./providers/definitions";
 import type { TierLimits, TierName } from "./types";
 
 interface Usage {
@@ -10,67 +13,141 @@ interface Usage {
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * 60_000;
+const MAX_PERSISTED_ENTRIES = 10_000;
+const MAX_PERSISTED_TOKENS = 1_000_000_000;
 
-const STATE_FILE = config.stateFile;
+const DEFAULT_STATE_FILE = config.stateFile;
 
-type PersistedState = Record<TierName, Usage>;
+function emptyUsage(): Usage {
+  return { requestTimestamps: [], tokenTimestamps: [], dayTimestamps: [] };
+}
+
+function finiteNumbers(value: unknown, now: number, windowMs: number): number[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (entry): entry is number =>
+        typeof entry === "number" &&
+        Number.isFinite(entry) &&
+        entry > 0 &&
+        entry <= now &&
+        now - entry < windowMs,
+    )
+    .slice(-MAX_PERSISTED_ENTRIES)
+    .sort((a, b) => a - b);
+}
+
+/** Reject corrupt or hostile persisted arrays and cap their memory footprint. */
+function normalizeUsage(value: unknown, now: number): Usage {
+  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const tokenEntries = Array.isArray(raw.tokenTimestamps) ? raw.tokenTimestamps : [];
+  const capped: { at: number; tokens: number }[] = [];
+  let totalTokens = 0;
+
+  for (let index = tokenEntries.length - 1; index >= 0; index -= 1) {
+    if (capped.length >= MAX_PERSISTED_ENTRIES) break;
+    const entry = tokenEntries[index] as Record<string, unknown> | null;
+    const at = entry?.at;
+    const tokens = entry?.tokens;
+    if (
+      typeof at !== "number" ||
+      !Number.isFinite(at) ||
+      at > now ||
+      now - at >= MINUTE ||
+      typeof tokens !== "number" ||
+      !Number.isFinite(tokens) ||
+      tokens < 0
+    ) {
+      continue;
+    }
+    if (totalTokens + tokens > MAX_PERSISTED_TOKENS) continue;
+    capped.push({ at, tokens });
+    totalTokens += tokens;
+  }
+
+  return {
+    requestTimestamps: finiteNumbers(raw.requestTimestamps, now, MINUTE),
+    tokenTimestamps: capped.reverse(),
+    dayTimestamps: finiteNumbers(raw.dayTimestamps, now, DAY),
+  };
+}
+
+function hasUsage(usage: Usage): boolean {
+  return (
+    usage.requestTimestamps.length > 0 ||
+    usage.tokenTimestamps.length > 0 ||
+    usage.dayTimestamps.length > 0
+  );
+}
 
 export class RateLimiter {
   private usage = new Map<TierName, Usage>();
   private unavailableUntil = new Map<TierName, number>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private saveChain: Promise<void> = Promise.resolve();
   private loaded: Promise<void>;
 
-  constructor() {
+  constructor(private readonly stateFile: string = DEFAULT_STATE_FILE) {
     this.loaded = this.load();
   }
 
   private async load() {
     try {
-      const file = Bun.file(STATE_FILE);
+      const file = Bun.file(this.stateFile);
       if (await file.exists()) {
-        const data: PersistedState = await file.json();
-        for (const [tier, usage] of Object.entries(data)) {
-          this.usage.set(tier as TierName, usage);
+        const data = (await file.json()) as Record<string, unknown>;
+        const now = Date.now();
+        for (const [tier, raw] of Object.entries(data)) {
+          if (!VALID_TIERS.includes(tier as TierName)) continue;
+          const usage = normalizeUsage(raw, now);
+          if (hasUsage(usage)) this.usage.set(tier as TierName, usage);
         }
-      }
-      const now = Date.now();
-      for (const [tier, usage] of this.usage.entries()) {
-        this.prune(usage, now);
-        this.cleanupIfEmpty(tier as TierName, usage);
       }
       await this.saveImmediately();
     } catch (err) {
-      log.warn(`[rateLimiter] couldn't load ${STATE_FILE}, starting fresh:`, err);
+      log.warn(`[rateLimiter] couldn't load ${this.stateFile}, starting fresh:`, err);
     }
   }
 
-  public async saveImmediately() {
+  /** Atomically replace the state file so readers never see a partial write. */
+  async saveImmediately(): Promise<void> {
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    const obj = Object.fromEntries(this.usage.entries());
-    try {
-      await Bun.write(STATE_FILE, JSON.stringify(obj, null, 2));
-    } catch (err) {
-      log.warn(`[rateLimiter] couldn't save ${STATE_FILE}:`, err);
-    }
+
+    const snapshot = Object.fromEntries(this.usage.entries());
+    const operation = this.saveChain.then(async () => {
+      const tempFile = `${this.stateFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
+      try {
+        await mkdir(path.dirname(this.stateFile), { recursive: true });
+        await Bun.write(tempFile, JSON.stringify(snapshot, null, 2));
+        await rename(tempFile, this.stateFile);
+      } catch (err) {
+        log.warn(`[rateLimiter] couldn't save ${this.stateFile}:`, err);
+        await rm(tempFile, { force: true }).catch(() => undefined);
+      }
+    });
+
+    this.saveChain = operation;
+    await operation;
   }
 
   private scheduleSave() {
     if (this.saveTimer) return;
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
-      this.saveImmediately();
+      void this.saveImmediately();
     }, 500);
   }
 
   private getUsage(tier: TierName): Usage {
-    if (!this.usage.has(tier)) {
-      this.usage.set(tier, { requestTimestamps: [], tokenTimestamps: [], dayTimestamps: [] });
+    let usage = this.usage.get(tier);
+    if (!usage) {
+      usage = emptyUsage();
+      this.usage.set(tier, usage);
     }
-    return this.usage.get(tier)!;
+    return usage;
   }
 
   private prune(usage: Usage, now: number) {
@@ -80,11 +157,7 @@ export class RateLimiter {
   }
 
   private cleanupIfEmpty(tier: TierName, usage: Usage) {
-    if (
-      usage.requestTimestamps.length === 0 &&
-      usage.tokenTimestamps.length === 0 &&
-      usage.dayTimestamps.length === 0
-    ) {
+    if (!hasUsage(usage)) {
       this.usage.delete(tier);
     }
   }
@@ -117,28 +190,21 @@ export class RateLimiter {
     }
 
     this.cleanupIfEmpty(tier, usage);
-
     return canServe;
   }
 
   record(tier: TierName, tokensUsed: number) {
     const now = Date.now();
+    const tokens = Number.isFinite(tokensUsed) && tokensUsed > 0 ? Math.floor(tokensUsed) : 0;
     const usage = this.getUsage(tier);
     usage.requestTimestamps.push(now);
     usage.dayTimestamps.push(now);
-    usage.tokenTimestamps.push({ at: now, tokens: tokensUsed });
+    usage.tokenTimestamps.push({ at: now, tokens });
     this.scheduleSave();
   }
 
   markUnavailable(tier: TierName, durationMs: number) {
     this.unavailableUntil.set(tier, Date.now() + durationMs);
-  }
-
-  private removeExpiredCooldown(tier: TierName): void {
-    const unavailableUntil = this.unavailableUntil.get(tier);
-    if (unavailableUntil && unavailableUntil <= Date.now()) {
-      this.unavailableUntil.delete(tier);
-    }
   }
 
   ready() {

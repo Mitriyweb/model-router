@@ -76,6 +76,8 @@ const generated = [
   "ROUTER_AUTH_TOKEN=",
   "# Disable the exact-repeat cache (true/false).",
   "ROUTER_DISABLE_CACHE=false",
+  "ROUTER_CACHE_TTL_MS=600000",
+  "ROUTER_CACHE_MAX_ENTRIES=500",
   "ROUTER_MAX_CONTEXT_TOKENS=128000",
   "RATE_LIMIT_STATE_FILE=.router-state.json",
   "",

@@ -75,6 +75,19 @@ describe("Server API Endpoints & Provider Specific Routing", () => {
     expect(autoModel.configured).toBe(true);
   });
 
+  test("GET /status includes cache statistics", async () => {
+    const res = await fetch(`${baseUrl}/status`);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.status).toBe("ok");
+    expect(json.tiers).toBeDefined();
+    expect(json.cache).toMatchObject({
+      entries: expect.any(Number),
+      maxEntries: expect.any(Number),
+      ttlMs: expect.any(Number),
+    });
+  });
+
   test("GET /v1/providers returns providers list with details", async () => {
     const res = await fetch(`${baseUrl}/v1/providers`);
     expect(res.status).toBe(200);

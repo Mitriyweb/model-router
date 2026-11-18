@@ -21,6 +21,8 @@ export interface ValidatedConfig {
   fallbackOrder: TierName[];
   hasCustomFallbackOrder: boolean;
   cacheDisabled: boolean;
+  cacheTtlMs: number;
+  cacheMaxEntries: number;
   routerMaxContextTokens: number;
   providers: Record<TierName, ProviderConfig>;
   /** Non-fatal issues, e.g. unknown fallback tiers skipped in permissive mode. */
@@ -162,6 +164,8 @@ export function validateConfigEnv(source: EnvSource = process.env): ValidatedCon
   const authToken = env("ROUTER_AUTH_TOKEN")?.trim() || undefined;
   const stateFile = env("RATE_LIMIT_STATE_FILE")?.trim() || ".router-state.json";
   const cacheDisabled = parseBoolean(env, "ROUTER_DISABLE_CACHE", errors);
+  const cacheTtlMs = parseInteger(env, "ROUTER_CACHE_TTL_MS", 600_000, 1, 86_400_000, errors);
+  const cacheMaxEntries = parseInteger(env, "ROUTER_CACHE_MAX_ENTRIES", 500, 1, 100_000, errors);
   const routerMaxContextTokens = parseInteger(
     env,
     "ROUTER_MAX_CONTEXT_TOKENS",
@@ -191,6 +195,8 @@ export function validateConfigEnv(source: EnvSource = process.env): ValidatedCon
     fallbackOrder: fallback.order,
     hasCustomFallbackOrder: fallback.custom,
     cacheDisabled,
+    cacheTtlMs,
+    cacheMaxEntries,
     routerMaxContextTokens,
     providers,
     warnings,

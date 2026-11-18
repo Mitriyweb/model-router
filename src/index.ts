@@ -3,6 +3,7 @@ import path from "node:path";
 import { version } from "../package.json";
 import { config } from "./config";
 import { configDirectory, configFilePath } from "./env";
+import { rateLimiter } from "./rateLimiter";
 import { startServer } from "./server";
 
 function initEnvFile() {
@@ -83,6 +84,15 @@ let host = config.host;
 const hostIndex = args.findIndex((a) => a === "-H" || a === "--host");
 if (hostIndex !== -1 && args[hostIndex + 1]) {
   host = args[hostIndex + 1];
+}
+
+await rateLimiter.ready();
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, async () => {
+    await rateLimiter.saveImmediately();
+    process.exit(0);
+  });
 }
 
 try {

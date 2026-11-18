@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { rateLimiter } from "../src/rateLimiter";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { RateLimiter, rateLimiter } from "../src/rateLimiter";
 import { retryAfterFromHeaders } from "../src/router";
 
 describe("rateLimiter", () => {
@@ -100,5 +103,88 @@ describe("rateLimiter", () => {
     expect(rateLimiter.snapshot("groq", { rpm: 10, tpm: 1000, rpd: 100 }).requestsThisMinute).toBe(
       0,
     );
+  });
+});
+
+describe("rateLimiter persistence", () => {
+  const limits = { rpm: 10, tpm: 1000, rpd: 100 };
+
+  it("loads persisted state before ready() resolves", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "model-router-limiter-"));
+    const stateFile = path.join(directory, "state.json");
+    const now = Date.now();
+    fs.writeFileSync(
+      stateFile,
+      JSON.stringify({
+        groq: {
+          requestTimestamps: [now - 1_000],
+          tokenTimestamps: [{ at: now - 1_000, tokens: 50 }],
+          dayTimestamps: [now - 1_000],
+        },
+      }),
+    );
+
+    try {
+      const limiter = new RateLimiter(stateFile);
+      await limiter.ready();
+
+      const snapshot = limiter.snapshot("groq", limits);
+      expect(snapshot.requestsThisMinute).toBe(1);
+      expect(snapshot.tokensThisMinute).toBe(50);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("writes state atomically without leaving temporary files", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "model-router-limiter-"));
+    const stateFile = path.join(directory, "state.json");
+
+    try {
+      const limiter = new RateLimiter(stateFile);
+      await limiter.ready();
+      limiter.record("groq", 100);
+      await limiter.saveImmediately();
+
+      expect(fs.existsSync(stateFile)).toBe(true);
+      expect(fs.readdirSync(directory).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+      expect(JSON.parse(fs.readFileSync(stateFile, "utf8")).groq.requestTimestamps).toHaveLength(1);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("caps and sanitizes persisted arrays and ignores unknown tiers", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "model-router-limiter-"));
+    const stateFile = path.join(directory, "state.json");
+    const now = Date.now();
+    fs.writeFileSync(
+      stateFile,
+      JSON.stringify({
+        groq: {
+          requestTimestamps: Array.from({ length: 20_000 }, () => now - 1_000),
+          tokenTimestamps: Array.from({ length: 20_000 }, () => ({ at: now - 1_000, tokens: 1 })),
+          dayTimestamps: Array.from({ length: 20_000 }, () => now - 1_000),
+        },
+        unknownTier: {
+          requestTimestamps: [now],
+          tokenTimestamps: [],
+          dayTimestamps: [now],
+        },
+      }),
+    );
+
+    try {
+      const limiter = new RateLimiter(stateFile);
+      await limiter.ready();
+      await limiter.saveImmediately();
+
+      const persisted = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+      expect(persisted.unknownTier).toBeUndefined();
+      expect(persisted.groq.requestTimestamps.length).toBeLessThanOrEqual(10_000);
+      expect(persisted.groq.tokenTimestamps.length).toBeLessThanOrEqual(10_000);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

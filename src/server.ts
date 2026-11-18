@@ -1,5 +1,6 @@
 import { gunzipSync } from "node:zlib";
 import { anthropicResponseToOpenAI, openAIRequestToNormalized } from "./adapters/openaiCompatible";
+import { cacheStats } from "./cache";
 import { config } from "./config";
 import { log } from "./log";
 import { VALID_TIERS, hasCredentials } from "./providers";
@@ -263,7 +264,7 @@ function handleStatus(): Response {
   const snapshot = Object.fromEntries(
     VALID_TIERS.map((t) => [t, rateLimiter.snapshot(t, config[t].limits)]),
   );
-  return json({ status: "ok", tiers: snapshot });
+  return json({ status: "ok", tiers: snapshot, cache: cacheStats() });
 }
 
 function isResetAuthorized(request: Request): boolean {

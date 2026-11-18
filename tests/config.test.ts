@@ -9,6 +9,8 @@ describe("config validation", () => {
     expect(result.port).toBe(8787);
     expect(result.host).toBe("127.0.0.1");
     expect(result.authToken).toBeUndefined();
+    expect(result.cacheTtlMs).toBe(600_000);
+    expect(result.cacheMaxEntries).toBe(500);
     expect(result.fallbackOrder).toEqual(VALID_TIERS);
     expect(Object.keys(result.providers)).toEqual(VALID_TIERS);
     expect(result.providers.cerebras.model).toBe("llama-3.3-70b");

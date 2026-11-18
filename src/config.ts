@@ -15,6 +15,8 @@ export interface Config extends Record<TierName, ProviderConfig> {
   fallbackOrder: TierName[];
   hasCustomFallbackOrder: boolean;
   cacheDisabled: boolean;
+  cacheTtlMs: number;
+  cacheMaxEntries: number;
   routerMaxContextTokens: number;
 }
 
@@ -32,6 +34,8 @@ export const config: Config = {
   fallbackOrder: validated.fallbackOrder,
   hasCustomFallbackOrder: validated.hasCustomFallbackOrder,
   cacheDisabled: validated.cacheDisabled,
+  cacheTtlMs: validated.cacheTtlMs,
+  cacheMaxEntries: validated.cacheMaxEntries,
   routerMaxContextTokens: validated.routerMaxContextTokens,
   ...validated.providers,
 };
