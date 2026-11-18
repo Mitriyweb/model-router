@@ -1,6 +1,6 @@
 {
   "name": "model-router",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "Universal proxy with Anthropic and OpenAI APIs for 10 free-tier and local LLM providers, with automatic fallback, caching and rate limiting",
   "main": "src/index.ts",
   "type": "module",
