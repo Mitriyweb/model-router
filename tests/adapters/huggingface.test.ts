@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { huggingfaceAdapter } from "../../src/adapters/huggingface";
 import { config } from "../../src/config";
+import { adapters } from "../../src/providers";
 import { rateLimiter } from "../../src/rateLimiter";
 import { routeRequest } from "../../src/router";
 import type { NormalizedRequest } from "../../src/types";
+
+const huggingfaceAdapter = adapters.huggingface;
 
 // ---------------------------------------------------------------------------
 // Helpers

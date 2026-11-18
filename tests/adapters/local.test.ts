@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { localAdapter } from "../../src/adapters/local";
-import { config } from "../../src/config";
+import { adapters } from "../../src/providers";
 import type { NormalizedRequest } from "../../src/types";
+
+const localAdapter = adapters.local;
 
 const baseReq: NormalizedRequest = {
   systemPrompt: "You are a helpful assistant.",

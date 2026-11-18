@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { cloudflareAdapter } from "../../src/adapters/cloudflare";
 import { config } from "../../src/config";
+import { adapters } from "../../src/providers";
 import type { NormalizedRequest } from "../../src/types";
+
+const cloudflareAdapter = adapters.cloudflare;
 
 const baseReq: NormalizedRequest = {
   systemPrompt: "You are a helpful assistant.",

@@ -1,15 +1,17 @@
 import { describe, expect, it, mock } from "bun:test";
-import { cerebrasAdapter } from "../src/adapters/cerebras";
 import { sanitizeGeminiSchema } from "../src/adapters/gemini";
-import { groqAdapter } from "../src/adapters/groq";
-import { mistralAdapter } from "../src/adapters/mistral";
 import { readProviderError } from "../src/adapters/openaiCompatible";
 import { config } from "../src/config";
 import { POLICIES } from "../src/policies";
+import { adapters } from "../src/providers";
 import { rateLimiter } from "../src/rateLimiter";
 import { estimateTokens, planTierOrder, routeRequest, routeRequestStream } from "../src/router";
 import { startServer } from "../src/server";
 import type { NormalizedRequest } from "../src/types";
+
+const cerebrasAdapter = adapters.cerebras;
+const groqAdapter = adapters.groq;
+const mistralAdapter = adapters.mistral;
 
 describe("router", () => {
   it("estimates token counts consistently", () => {

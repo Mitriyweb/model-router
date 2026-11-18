@@ -1,15 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { cerebrasAdapter } from "../../src/adapters/cerebras";
-import { cloudflareAdapter } from "../../src/adapters/cloudflare";
 import { cohereAdapter } from "../../src/adapters/cohere";
 import { geminiAdapter } from "../../src/adapters/gemini";
-import { groqAdapter } from "../../src/adapters/groq";
-import { localAdapter } from "../../src/adapters/local";
-import { mistralAdapter } from "../../src/adapters/mistral";
-import { nvidiaAdapter } from "../../src/adapters/nvidia";
-import { openrouterAdapter } from "../../src/adapters/openrouter";
 import { config } from "../../src/config";
+import { adapters } from "../../src/providers";
 import type { NormalizedRequest, ProviderAdapter } from "../../src/types";
+
+const cerebrasAdapter = adapters.cerebras;
+const cloudflareAdapter = adapters.cloudflare;
+const groqAdapter = adapters.groq;
+const localAdapter = adapters.local;
+const mistralAdapter = adapters.mistral;
+const nvidiaAdapter = adapters.nvidia;
+const openrouterAdapter = adapters.openrouter;
 
 const shouldRunE2E = process.env.RUN_E2E === "true" || process.env.RUN_E2E === "1";
 

@@ -1,3 +1,5 @@
+import type { ProviderId } from "./providers/definitions";
+
 export type Role = "user" | "assistant" | "system";
 
 export type ContentBlock =
@@ -59,24 +61,10 @@ export interface NormalizedRequest {
   signal?: AbortSignal;
 }
 
-export type TierName =
-  | "groq"
-  | "gemini"
-  | "openrouter"
-  | "cerebras"
-  | "mistral"
-  | "nvidia"
-  | "huggingface"
-  | "cloudflare"
-  | "cohere"
-  | "local";
+export type TierName = ProviderId;
 export type ResolvedBy = TierName | "deterministic";
 
-export interface TierLimits {
-  rpm: number;
-  tpm: number;
-  rpd: number;
-}
+export type { ProviderLimits as TierLimits } from "./providers/definitions";
 
 export interface ProviderAdapter {
   tier: TierName;

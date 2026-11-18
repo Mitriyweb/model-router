@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { groqAdapter } from "../../src/adapters/groq";
 import { config } from "../../src/config";
+import { adapters } from "../../src/providers";
 import type { NormalizedRequest } from "../../src/types";
+
+const groqAdapter = adapters.groq;
 
 const baseReq: NormalizedRequest = {
   systemPrompt: "You are a helpful assistant.",

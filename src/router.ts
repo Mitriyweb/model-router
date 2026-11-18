@@ -1,21 +1,12 @@
-import { cerebrasAdapter } from "./adapters/cerebras";
-import { cloudflareAdapter } from "./adapters/cloudflare";
-import { cohereAdapter } from "./adapters/cohere";
-import { geminiAdapter } from "./adapters/gemini";
-import { groqAdapter } from "./adapters/groq";
-import { huggingfaceAdapter } from "./adapters/huggingface";
-import { localAdapter } from "./adapters/local";
-import { mistralAdapter } from "./adapters/mistral";
-import { nvidiaAdapter } from "./adapters/nvidia";
-import { openrouterAdapter } from "./adapters/openrouter";
 import { cacheKey, setCached } from "./cache";
 import { config } from "./config";
+import { AllTiersFailedError, type RouteAttempt } from "./errors";
 import { log } from "./log";
 import { POLICIES } from "./policies";
+import { adapters, hasCredentials } from "./providers";
 import { pruneNormalizedRequest } from "./pruner";
 import { rateLimiter, retryAfterFromError } from "./rateLimiter";
 export { retryAfterFromError, retryAfterFromHeaders } from "./rateLimiter";
-import { AllTiersFailedError, type RouteAttempt } from "./errors";
 import { resolvers } from "./resolvers";
 import { AnthropicSSEWriter } from "./streaming/anthropicSSE";
 import { reconstructingStream } from "./streaming/reconstruct";
@@ -23,32 +14,6 @@ import { estimateRequestTokens } from "./tokenizer";
 import type { NormalizedRequest, ProviderAdapter, ResolvedBy, TierName } from "./types";
 
 export { estimateRequestTokens as estimateTokens };
-
-const adapters: Record<TierName, ProviderAdapter> = {
-  cerebras: cerebrasAdapter,
-  groq: groqAdapter,
-  gemini: geminiAdapter,
-  openrouter: openrouterAdapter,
-  mistral: mistralAdapter,
-  nvidia: nvidiaAdapter,
-  huggingface: huggingfaceAdapter,
-  cloudflare: cloudflareAdapter,
-  cohere: cohereAdapter,
-  local: localAdapter,
-};
-
-const limitsByTier: Record<TierName, { rpm: number; tpm: number; rpd: number }> = {
-  cerebras: config.cerebras.limits,
-  groq: config.groq.limits,
-  gemini: config.gemini.limits,
-  openrouter: config.openrouter.limits,
-  mistral: config.mistral.limits,
-  nvidia: config.nvidia.limits,
-  huggingface: config.huggingface.limits,
-  cloudflare: config.cloudflare.limits,
-  cohere: config.cohere.limits,
-  local: config.local.limits,
-};
 
 /**
  * Decide the ordered list of tiers to try for this request.
@@ -138,7 +103,7 @@ export async function routeRequest(
 
   for (const tier of order) {
     const adapter = adapters[tier];
-    const limits = limitsByTier[tier];
+    const limits = config[tier].limits;
 
     const hasKey = hasCredentials(tier);
     if (!hasKey) {
@@ -209,30 +174,7 @@ export async function routeRequest(
   throw new AllTiersFailedError(attempts);
 }
 
-export function hasCredentials(tier: TierName): boolean {
-  switch (tier) {
-    case "cerebras":
-      return Boolean(config.cerebras.apiKey);
-    case "groq":
-      return Boolean(config.groq.apiKey);
-    case "gemini":
-      return Boolean(config.gemini.apiKey);
-    case "openrouter":
-      return Boolean(config.openrouter.apiKey);
-    case "mistral":
-      return Boolean(config.mistral.apiKey);
-    case "nvidia":
-      return Boolean(config.nvidia.apiKey);
-    case "huggingface":
-      return Boolean(config.huggingface.apiKey);
-    case "cloudflare":
-      return Boolean(config.cloudflare.apiToken && config.cloudflare.accountId);
-    case "cohere":
-      return Boolean(config.cohere.apiKey);
-    case "local":
-      return true;
-  }
-}
+export { hasCredentials } from "./providers";
 
 export interface StreamRouteResult {
   tierUsed: ResolvedBy;
@@ -277,7 +219,7 @@ export async function routeRequestStream(
 
   for (const tier of order) {
     const adapter = adapters[tier];
-    const limits = limitsByTier[tier];
+    const limits = config[tier].limits;
     if (!hasCredentials(tier)) continue;
     if (!adapter.sendStream) continue;
     let effectiveReq = req;

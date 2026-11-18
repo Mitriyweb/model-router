@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { openrouterAdapter } from "../../src/adapters/openrouter";
 import { config } from "../../src/config";
+import { adapters } from "../../src/providers";
 import type { NormalizedRequest } from "../../src/types";
+
+const openrouterAdapter = adapters.openrouter;
 
 const baseReq: NormalizedRequest = {
   systemPrompt: "You are a helpful assistant.",

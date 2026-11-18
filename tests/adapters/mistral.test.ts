@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { mistralAdapter } from "../../src/adapters/mistral";
 import { config } from "../../src/config";
+import { adapters } from "../../src/providers";
 import type { NormalizedRequest } from "../../src/types";
+
+const mistralAdapter = adapters.mistral;
 
 const baseReq: NormalizedRequest = {
   systemPrompt: "You are a helpful assistant.",

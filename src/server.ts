@@ -2,8 +2,9 @@ import { gunzipSync } from "node:zlib";
 import { anthropicResponseToOpenAI, openAIRequestToNormalized } from "./adapters/openaiCompatible";
 import { config } from "./config";
 import { log } from "./log";
+import { VALID_TIERS, hasCredentials } from "./providers";
 import { rateLimiter } from "./rateLimiter";
-import { hasCredentials, routeRequest, routeRequestStream } from "./router";
+import { routeRequest, routeRequestStream } from "./router";
 import { anthropicStreamToOpenAI } from "./streaming/openaiSSE";
 import type { AnthropicRequest, NormalizedRequest, TierName } from "./types";
 
@@ -84,19 +85,6 @@ async function handleStreamingMessages(
     return json({ error: "all_tiers_exhausted", detail: err.message }, 502);
   }
 }
-
-const VALID_TIERS: TierName[] = [
-  "cerebras",
-  "groq",
-  "gemini",
-  "openrouter",
-  "mistral",
-  "nvidia",
-  "huggingface",
-  "cloudflare",
-  "cohere",
-  "local",
-];
 
 function isValidTier(tier?: string | null): tier is TierName {
   if (!tier) return false;
@@ -201,7 +189,7 @@ function handleModels(): Response {
   for (const tier of VALID_TIERS) {
     const tierConfig = config[tier];
     const configured = hasCredentials(tier);
-    const defaultModel = "model" in tierConfig ? (tierConfig.model as string) : "";
+    const defaultModel = tierConfig.model;
 
     // Add provider identifier alias as a model
     modelsMap.set(tier, {
@@ -255,7 +243,7 @@ function handleProviders(): Response {
   const providers = VALID_TIERS.map((tier) => {
     const tierConfig = config[tier];
     const configured = hasCredentials(tier);
-    const defaultModel = "model" in tierConfig ? (tierConfig.model as string) : "";
+    const defaultModel = tierConfig.model;
     const snapshot = rateLimiter.snapshot(tier, tierConfig.limits);
 
     return {
