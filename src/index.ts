@@ -45,6 +45,7 @@ Usage:
 
 Options:
   -p, --port <number>   Port to listen on (default: 8787 or PORT env)
+  -H, --host <address>  Bind address (default: 127.0.0.1 or ROUTER_HOST env)
   -i, --init-env        Create a .env file with default configuration
   -h, --help            Show this help message
   -v, --version         Show version
@@ -54,8 +55,10 @@ Environment Variables:
   GEMINI_API_KEY        API key for Google Gemini
   OPENROUTER_API_KEY    API key for OpenRouter
   LOCAL_BASE_URL        Base URL for local OpenAI-compatible endpoint (default: http://localhost:11434/v1)
-  FALLBACK_ORDER        Comma-separated tier preference (default: groq,gemini,openrouter,local)
+  FALLBACK_ORDER        Comma-separated tier preference (default: registry order)
   PORT                  Port to listen on (default: 8787)
+  ROUTER_HOST           Bind address (default: 127.0.0.1)
+  ROUTER_AUTH_TOKEN     Bearer token required for /reset endpoints
 `);
   process.exit(0);
 }
@@ -76,8 +79,14 @@ if (portIndex !== -1 && args[portIndex + 1]) {
   port = Number(args[portIndex + 1]);
 }
 
+let host = config.host;
+const hostIndex = args.findIndex((a) => a === "-H" || a === "--host");
+if (hostIndex !== -1 && args[hostIndex + 1]) {
+  host = args[hostIndex + 1];
+}
+
 try {
-  startServer(port);
+  startServer(port, host);
 } catch (err) {
   const error = err as { code?: string; message?: string };
 

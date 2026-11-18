@@ -32,7 +32,10 @@ export interface ProviderConfig {
 }
 
 export interface ProviderDefinition {
+  /** Human-readable name used in docs and errors. */
   label: string;
+  /** Short description for generated `.env.example` sections. */
+  description: string;
   protocol: ProviderProtocol;
   /** Prefix for generated env vars: `<PREFIX>_API_KEY`, `_BASE_URL`, `_MODEL`, `_RPM`, ... */
   envPrefix: string;
@@ -50,6 +53,8 @@ export interface ProviderDefinition {
   contextLimit?: "router" | number;
   /** Provider can only serve requests when a model is configured. */
   requiresModel?: boolean;
+  /** Additional generic config fields exposed as `<PREFIX>_<NAME>` env vars. */
+  envExtras?: readonly "provider"[];
   /** Extra headers derived from the resolved config. */
   extraHeaders?: (cfg: ProviderConfig) => Record<string, string>;
 }
@@ -57,6 +62,7 @@ export interface ProviderDefinition {
 export const PROVIDERS = {
   cerebras: {
     label: "Cerebras",
+    description: "Ultra-fast Llama inference (https://cloud.cerebras.ai)",
     protocol: "openai",
     envPrefix: "CEREBRAS",
     baseUrlDefault: "https://api.cerebras.ai/v1",
@@ -66,6 +72,7 @@ export const PROVIDERS = {
   },
   groq: {
     label: "Groq",
+    description: "Fast free-tier inference (https://console.groq.com)",
     protocol: "openai",
     envPrefix: "GROQ",
     baseUrlDefault: "https://api.groq.com/openai/v1",
@@ -75,6 +82,7 @@ export const PROVIDERS = {
   },
   gemini: {
     label: "Gemini",
+    description: "Google Gemini free tier (https://aistudio.google.com)",
     protocol: "gemini",
     envPrefix: "GEMINI",
     baseUrlDefault: "https://generativelanguage.googleapis.com/v1beta",
@@ -83,6 +91,7 @@ export const PROVIDERS = {
   },
   openrouter: {
     label: "OpenRouter",
+    description: "Free models via one endpoint (https://openrouter.ai)",
     protocol: "openai",
     envPrefix: "OPENROUTER",
     baseUrlDefault: "https://openrouter.ai/api/v1",
@@ -96,6 +105,7 @@ export const PROVIDERS = {
   },
   mistral: {
     label: "Mistral",
+    description: "Mistral free tier (https://console.mistral.ai)",
     protocol: "openai",
     envPrefix: "MISTRAL",
     baseUrlDefault: "https://api.mistral.ai/v1",
@@ -105,6 +115,7 @@ export const PROVIDERS = {
   },
   nvidia: {
     label: "NVIDIA NIM",
+    description: "NVIDIA free inference (https://build.nvidia.com)",
     protocol: "openai",
     envPrefix: "NVIDIA",
     baseUrlDefault: "https://integrate.api.nvidia.com/v1",
@@ -113,6 +124,8 @@ export const PROVIDERS = {
   },
   huggingface: {
     label: "Hugging Face",
+    description:
+      "Inference Providers (https://huggingface.co/docs/api-inference/inference-providers)",
     protocol: "openai",
     envPrefix: "HF",
     baseUrlDefault: "https://router.huggingface.co/v1",
@@ -120,6 +133,7 @@ export const PROVIDERS = {
     limits: { rpm: 20, tpm: 40_000, rpd: 1_000 },
     contextLimit: "router",
     requiresModel: true,
+    envExtras: ["provider"],
     extraHeaders: (cfg) => {
       const headers: Record<string, string> = {};
       if (cfg.provider) headers["x-hf-provider"] = cfg.provider;
@@ -128,6 +142,7 @@ export const PROVIDERS = {
   },
   cloudflare: {
     label: "Cloudflare AI",
+    description: "Workers AI free tier (https://dash.cloudflare.com)",
     protocol: "openai",
     envPrefix: "CLOUDFLARE",
     credentials: ["apiToken", "accountId"],
@@ -138,6 +153,7 @@ export const PROVIDERS = {
   },
   cohere: {
     label: "Cohere",
+    description: "Command R+ tool-use API (https://dashboard.cohere.com)",
     protocol: "cohere",
     envPrefix: "COHERE",
     baseUrlDefault: "https://api.cohere.com/v2",
@@ -146,6 +162,7 @@ export const PROVIDERS = {
   },
   local: {
     label: "Local",
+    description: "Local OpenAI-compatible server (Ollama, llama.cpp, etc.)",
     protocol: "openai",
     envPrefix: "LOCAL",
     credentials: [],

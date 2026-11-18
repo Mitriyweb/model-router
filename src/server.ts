@@ -266,6 +266,15 @@ function handleStatus(): Response {
   return json({ status: "ok", tiers: snapshot });
 }
 
+function isResetAuthorized(request: Request): boolean {
+  if (!config.authToken) return true;
+  const authorization = request.headers.get("authorization");
+  return (
+    authorization === `Bearer ${config.authToken}` ||
+    request.headers.get("x-router-auth-token") === config.authToken
+  );
+}
+
 function json(data: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -273,9 +282,10 @@ function json(data: unknown, status = 200, headers: Record<string, string> = {})
   });
 }
 
-export function startServer(port = config.port) {
+export function startServer(port = config.port, hostname = config.host) {
   const server = Bun.serve({
     port,
+    hostname,
     idleTimeout: 60,
     async fetch(request) {
       const url = new URL(request.url);
@@ -345,6 +355,9 @@ export function startServer(port = config.port) {
           url.pathname === "/v1/reset") &&
         (request.method === "POST" || request.method === "DELETE")
       ) {
+        if (!isResetAuthorized(request)) {
+          return json({ error: "unauthorized" }, 401, { "WWW-Authenticate": "Bearer" });
+        }
         await rateLimiter.reset();
         return json({ status: "ok", message: "rate limiter state reset" });
       }
@@ -355,7 +368,7 @@ export function startServer(port = config.port) {
     },
   });
 
-  log.info(`model-router listening on http://localhost:${server.port}`);
+  log.info(`model-router listening on http://${hostname}:${server.port}`);
   log.info(`  Anthropic: export ANTHROPIC_BASE_URL=http://localhost:${server.port}`);
   log.info(`  OpenAI:    export OPENAI_BASE_URL=http://localhost:${server.port}/v1`);
   return server;

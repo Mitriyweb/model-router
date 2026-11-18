@@ -137,7 +137,7 @@ export const geminiAdapter: ProviderAdapter = {
   sendStream(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const model = req.model ?? config.gemini.model;
     const payload = buildGeminiPayload(req);
-    const url = `${config.gemini.baseUrl}/models/${model}:streamGenerateContent?alt=sse&key=${config.gemini.apiKey}`;
+    const url = `${config.gemini.baseUrl}/models/${model}:streamGenerateContent?alt=sse`;
     const signal = opts?.signal ?? req.signal;
 
     return new ReadableStream<Uint8Array>({
@@ -153,7 +153,10 @@ export const geminiAdapter: ProviderAdapter = {
         try {
           const res = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": config.gemini.apiKey,
+            },
             body: JSON.stringify(payload),
             signal,
           });
@@ -228,11 +231,14 @@ export const geminiAdapter: ProviderAdapter = {
   async send(req: NormalizedRequest, opts?: { signal?: AbortSignal }) {
     const model = req.model ?? config.gemini.model;
     const payload = buildGeminiPayload(req);
-    const url = `${config.gemini.baseUrl}/models/${model}:generateContent?key=${config.gemini.apiKey}`;
+    const url = `${config.gemini.baseUrl}/models/${model}:generateContent`;
     const signal = opts?.signal ?? req.signal;
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": config.gemini.apiKey,
+      },
       body: JSON.stringify(payload),
       signal,
     });

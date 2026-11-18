@@ -57,6 +57,24 @@ describe("Gemini Adapter", () => {
     expect((response.content[0] as any).text).toBe("Hello from Gemini!");
   });
 
+  it("sends the API key in a header instead of the URL", async () => {
+    let calledUrl = "";
+    let calledInit: RequestInit | undefined;
+
+    globalThis.fetch = mock(async (input: any, init?: RequestInit) => {
+      calledUrl = String(input);
+      calledInit = init;
+      return makeOkResponse();
+    }) as unknown as typeof fetch;
+
+    await geminiAdapter.send(baseReq);
+
+    expect(calledUrl).not.toContain("key=");
+    expect((calledInit?.headers as Record<string, string>)["x-goog-api-key"]).toBe(
+      "gemini_test_key",
+    );
+  });
+
   it("should handle streaming requests", async () => {
     const encoder = new TextEncoder();
     globalThis.fetch = mock(async () => {

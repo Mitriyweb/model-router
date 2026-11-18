@@ -29,6 +29,9 @@ jobs:
       - name: Run TypeScript typecheck
         run: bun run typecheck
 
+      - name: Check generated .env.example
+        run: bun run env:check
+
       - name: Run test suite
         run: bun test
 

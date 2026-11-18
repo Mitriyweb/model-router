@@ -1,3 +1,4 @@
+import { config } from "./config";
 import { log } from "./log";
 import type { TierLimits, TierName } from "./types";
 
@@ -10,7 +11,7 @@ interface Usage {
 const MINUTE = 60_000;
 const DAY = 24 * 60 * 60_000;
 
-const STATE_FILE = process.env.RATE_LIMIT_STATE_FILE ?? ".router-state.json";
+const STATE_FILE = config.stateFile;
 
 type PersistedState = Record<TierName, Usage>;
 
